@@ -424,6 +424,16 @@
             <label>孩子平日放學到家時間</label>
             <input id="reg-hometime" type="time" value="16:00">
           </div>
+          <div>
+            <label>家裡地址 🏠</label>
+            <div style="display:flex;gap:8px;align-items:flex-start;flex-direction:column;">
+              <input id="reg-homeaddr" type="text" placeholder="例如：台南市永康區中正路100號">
+              <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="geocodeHomeAddress()">📍 確認地址座標</button>
+              <div id="reg-addr-result" style="font-size:13px;color:var(--muted);min-height:18px;"></div>
+              <input type="hidden" id="reg-homelat">
+              <input type="hidden" id="reg-homelng">
+            </div>
+          </div>
         </div>
       </div>
       <button class="btn" onclick="doRegister()">完成註冊</button>
@@ -952,18 +962,46 @@ function doRegister() {
   const password2 = document.getElementById('reg-password2').value;
   const childname = document.getElementById('reg-childname').value.trim();
   const hometime  = document.getElementById('reg-hometime').value;
+  const homeaddr  = document.getElementById('reg-homeaddr').value.trim();
+  const homelat   = document.getElementById('reg-homelat').value;
+  const homelng   = document.getElementById('reg-homelng').value;
 
   if (!username || !password || !childname) { showToast('請填寫所有必填欄位 ⚠️'); return; }
   if (password.length < 6) { showToast('密碼至少需要 6 個字元'); return; }
   if (password !== password2) { showToast('兩次密碼不一致 ⚠️'); return; }
+  if (!homelat || !homelng) { showToast('請先按「確認地址座標」取得家裡位置 📍'); return; }
 
   const users = getUsers();
   if (users[username]) { showToast('帳號已存在，請換一個'); return; }
 
-  users[username] = { password, childname, hometime, records: [], messages: [] };
+  users[username] = {
+    password, childname, hometime,
+    homeaddr, homelat: parseFloat(homelat), homelng: parseFloat(homelng),
+    records: [], messages: []
+  };
   saveUsers(users);
   showToast('🎉 註冊成功！請登入');
   showPage('page-login');
+}
+
+/* ══════════════════════════════════════════════════════
+   地址 Geocoding（Nominatim / OpenStreetMap）
+══════════════════════════════════════════════════════ */
+function geocodeHomeAddress() {
+  const addr = document.getElementById('reg-homeaddr').value.trim();
+  if (!addr) { showToast('請先輸入家裡地址'); return; }
+  const resultEl = document.getElementById('reg-addr-result');
+  resultEl.textContent = '🔍 搜尋中…';
+  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1&accept-language=zh-TW`)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.length) { resultEl.textContent = '❌ 找不到此地址，請嘗試更詳細的地址'; return; }
+      const { lat, lon, display_name } = data[0];
+      document.getElementById('reg-homelat').value = lat;
+      document.getElementById('reg-homelng').value = lon;
+      resultEl.innerHTML = `✅ 已找到：${display_name.slice(0, 60)}…<br><span style="color:#25D366;">緯度 ${parseFloat(lat).toFixed(5)}，經度 ${parseFloat(lon).toFixed(5)}</span>`;
+    })
+    .catch(() => { resultEl.textContent = '⚠️ 網路錯誤，請確認網路連線後重試'; });
 }
 
 /* ══════════════════════════════════════════════════════
@@ -991,6 +1029,7 @@ function doLogin() {
 function enterApp(role) {
   if (role === 'child') {
     showPage('page-child-home');
+    startChildGPSWatch(); // 啟動 GPS 背景監測
   } else {
     showPage('page-parent-home');
     refreshParentHome();
