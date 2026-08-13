@@ -1145,8 +1145,9 @@ function loadAvatar() {
   if (!user) return;
   const childSrc   = user.childAvatar  || user.avatar || '';
   const parentSrc  = user.parentAvatar || '';
-  const childHtml  = childSrc  ? `<img src="${childSrc}"  alt="大頭貼">` : '🧒';
-  const parentHtml = parentSrc ? `<img src="${parentSrc}" alt="大頭貼">` : '👨‍👩‍👧';
+  const imgStyle   = 'width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;';
+  const childHtml  = childSrc  ? `<img src="${childSrc}"  alt="大頭貼" style="${imgStyle}">` : '🧒';
+  const parentHtml = parentSrc ? `<img src="${parentSrc}" alt="大頭貼" style="${imgStyle}">` : '👨‍👩‍👧';
 
   // 小孩頁各頭像（topbar + 設定頁）
   ['child-avatar', 'settings-child-avatar'].forEach(id => {
