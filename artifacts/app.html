@@ -446,13 +446,18 @@
           <span style="font-size:36px;">📷</span>
           <span>請選擇下方方式上傳</span>
         </div>
-        <!-- 拍照：只有 capture，不加 accept，強制直接開後鏡頭 -->
+        <!-- 拍照：手機用，capture 強制開後鏡頭 -->
         <input type="file" id="photo-input-camera" capture="environment" onchange="previewPhoto(event)" style="display:none">
-        <!-- 相簿：只有 accept，不加 capture，讓使用者從相簿選檔案 -->
+        <!-- 相簿/檔案：所有裝置通用 -->
         <input type="file" id="photo-input-gallery" accept="image/*" onchange="previewPhoto(event)" style="display:none">
-        <div style="display:flex;gap:10px;margin-top:12px;">
+        <!-- 手機版：兩個按鈕（拍照＋相簿） -->
+        <div id="photo-btn-mobile" style="display:none;gap:10px;margin-top:12px;">
           <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-camera').click()">📷 直接拍照</button>
           <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-gallery').click()">🖼️ 從相簿選</button>
+        </div>
+        <!-- 電腦版：只有一個選擇檔案按鈕 -->
+        <div id="photo-btn-desktop" style="display:none;margin-top:12px;">
+          <button class="btn secondary" style="width:100%;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-gallery').click()">🖼️ 選擇照片上傳</button>
         </div>
         <div style="margin-top:12px;">
           <label>想說什麼嗎？（選填）</label>
@@ -956,6 +961,16 @@ function refreshChildHome() {
   document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>請選擇下方方式上傳</span>';
   document.getElementById('photo-preview').classList.remove('has-img');
   document.getElementById('photo-note').value = '';
+  initPhotoButtons();
+}
+
+/* ══════════════════════════════════════════════════════
+   照片按鈕：自動偵測電腦或手機
+══════════════════════════════════════════════════════ */
+function initPhotoButtons() {
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  document.getElementById('photo-btn-mobile').style.display  = isMobile ? 'flex'  : 'none';
+  document.getElementById('photo-btn-desktop').style.display = isMobile ? 'none' : 'block';
 }
 
 /* ══════════════════════════════════════════════════════
