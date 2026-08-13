@@ -71,6 +71,7 @@
   .topbar .avatar:hover { border-color: rgba(255,255,255,.9); }
   .topbar .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   #avatar-input { display: none; }
+  #parent-avatar-input { display: none; }
   .topbar h1 { font-size: 17px; font-weight: 700; }
   .topbar .sub { font-size: 12px; opacity: .8; }
   .topbar .back-btn {
@@ -301,6 +302,15 @@
   .notif-banner.ok { background: #e8f5e9; border-color: var(--green); }
   .notif-banner.ok .notif-text { color: #2e7d32; }
 
+  /* ── SOS 通知橫幅 ── */
+  .sos-banner {
+    background: #fdecea; border: 2px solid #e53935;
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .sos-banner .notif-icon { font-size: 24px; flex-shrink: 0; }
+  .sos-banner .notif-text { font-size: 14px; color: #b71c1c; line-height: 1.5; font-weight: 600; }
+
   /* ── 通知吐司 ── */
   #toast {
     position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
@@ -347,6 +357,8 @@
                 <span class="icon">👨‍👩‍👧</span>
                 <span>家長</span>
               </div>
+            </div>
+            <div id="login-role-display" style="text-align:center;margin-top:6px;font-size:13px;color:var(--muted);">目前選擇：<strong id="login-role-text">小孩</strong>
             </div>
           </div>
           <button class="btn" onclick="doLogin()">登入</button>
@@ -414,6 +426,7 @@
   <div id="page-child-home" class="page">
     <div class="topbar">
       <div class="avatar" id="child-avatar" onclick="document.getElementById('avatar-input').click()" title="點擊更換大頭貼">🧒</div>
+      <input type="file" id="avatar-input" accept="image/png,image/jpeg,image/jpg,image/*">
       <div>
         <h1 id="child-greeting">嗨！</h1>
         <div class="sub" id="child-date"></div>
@@ -444,17 +457,20 @@
           <span style="font-size:36px;">📷</span>
           <span>請選擇下方方式上傳</span>
         </div>
-        <!-- 兩個隱藏 input：一個拍照、一個相簿 -->
-        <input type="file" id="photo-input-camera" accept="image/*" capture="environment" onchange="previewPhoto(event)" style="display:none">
-        <input type="file" id="photo-input-gallery" accept="image/*" onchange="previewPhoto(event)" style="display:none">
+        <!-- 兩個隱藏 input：一個拍照、一個相簿，開放所有圖片格式 -->
+        <input type="file" id="photo-input-camera" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/*" capture="environment" onchange="previewPhoto(event)" style="display:none">
+        <input type="file" id="photo-input-gallery" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/*" onchange="previewPhoto(event)" style="display:none">
         <!-- 選擇按鈕列 -->
         <div style="display:flex;gap:10px;margin-top:12px;">
-          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-camera').click()">📷 直接拍照</button>
+          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="openCamera()">📷 直接拍照</button>
           <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-gallery').click()">🖼️ 從相簿選</button>
         </div>
         <div style="margin-top:12px;">
           <label>想說什麼嗎？（選填）</label>
-          <textarea id="photo-note" placeholder="今天發生了什麼有趣的事…"></textarea>
+          <div style="display:flex;gap:8px;align-items:flex-end;">
+            <textarea id="photo-note" placeholder="今天發生了什麼有趣的事…" style="flex:1;"></textarea>
+            <button class="mic-btn" id="note-mic-btn" onclick="toggleNoteRecording()" title="語音輸入" style="flex-shrink:0;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;background:var(--gray);">🎤</button>
+          </div>
         </div>
         <button class="btn" style="margin-top:12px;" onclick="savePhoto()">上傳今日照片 ✨</button>
       </div>
@@ -496,9 +512,10 @@
     <div class="content" id="msg-bubble-list" style="background:#ECE5DD;">
       <div class="msg-empty">還沒有訊息，快傳訊息給爸爸媽媽吧 💛</div>
     </div>
-    <!-- 輸入列 -->
+    <!-- 輸入列（含語音） -->
     <div class="msg-input-row">
       <textarea id="child-msg-input" placeholder="跟爸爸媽媽說說話…" rows="1"></textarea>
+      <button class="mic-btn" id="child-mic-btn" onclick="toggleChildRecording()" title="語音輸入">🎤</button>
       <button class="send-btn" onclick="childSendMsg()" title="送出">➤</button>
     </div>
     <div class="bottom-nav">
@@ -552,7 +569,8 @@
   ════════════════════════════ -->
   <div id="page-parent-home" class="page">
     <div class="topbar parent-topbar">
-      <div class="avatar" id="parent-avatar" onclick="document.getElementById('avatar-input').click()" title="點擊更換大頭貼">👨‍👩‍👧</div>
+      <div class="avatar" id="parent-avatar" onclick="document.getElementById('parent-avatar-input').click()" title="點擊更換大頭貼">👨‍👩‍👧</div>
+      <input type="file" id="parent-avatar-input" accept="image/png,image/jpeg,image/jpg,image/*" style="display:none">
       <div style="flex:1">
         <h1 id="parent-greeting">家長儀表板</h1>
         <div class="sub" id="parent-child-sub">查看孩子今天的狀況</div>
@@ -560,6 +578,12 @@
       <button class="back-btn" onclick="doParentLogout()" title="登出" style="font-size:18px;">⎋</button>
     </div>
     <div class="content">
+
+      <!-- SOS 通知橫幅 -->
+      <div id="parent-sos-banner" class="sos-banner" style="display:none;">
+        <div class="notif-icon">🆘</div>
+        <div class="notif-text" id="parent-sos-text"></div>
+      </div>
 
       <!-- 通知橫幅 -->
       <div id="parent-notif-banner" class="notif-banner" style="display:none;">
@@ -701,7 +725,6 @@
 
   <!-- 通知吐司 -->
   <div id="toast"></div>
-  <input type="file" id="avatar-input" accept="image/*">
 </div>
 
 <script>
@@ -714,41 +737,65 @@ let selectedMood = null;
 let selectedPhotoDataUrl = null;
 
 /* ────────────────────────────────
-   大頭貼
+   大頭貼（小孩/家長分開儲存）
 ──────────────────────────────── */
 function loadAvatar() {
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
-  const avatarSrc = users[sess.username] && users[sess.username].avatar;
-  const avatarEl = document.getElementById(sess.role === 'child' ? 'child-avatar' : 'parent-avatar');
-  if (!avatarEl) return;
-  if (avatarSrc) {
-    avatarEl.innerHTML = `<img src="${avatarSrc}" alt="大頭貼">`;
+  const u = users[sess.username];
+  if (sess.role === 'child') {
+    const el = document.getElementById('child-avatar');
+    if (!el) return;
+    el.innerHTML = (u && u.childAvatar) ? `<img src="${u.childAvatar}" alt="大頭貼">` : '🧒';
   } else {
-    avatarEl.innerHTML = sess.role === 'child' ? '🧒' : '👨‍👩‍👧';
+    const el = document.getElementById('parent-avatar');
+    if (!el) return;
+    el.innerHTML = (u && u.parentAvatar) ? `<img src="${u.parentAvatar}" alt="大頭貼">` : '👨‍👩‍👧';
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('avatar-input');
-  input.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const sess = getSession();
-      if (!sess) return;
-      const users = getUsers();
-      users[sess.username].avatar = ev.target.result;
-      saveUsers(users);
-      loadAvatar();
-      showToast('🖼️ 大頭貼已更新！');
-    };
-    reader.readAsDataURL(file);
-    // 清除 input 讓同一張照片可重複選
-    input.value = '';
-  });
+  // 小孩大頭貼 input
+  const childInput = document.getElementById('avatar-input');
+  if (childInput) {
+    childInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const sess = getSession();
+        if (!sess) return;
+        const users = getUsers();
+        users[sess.username].childAvatar = ev.target.result;
+        saveUsers(users);
+        loadAvatar();
+        showToast('🖼️ 小孩大頭貼已更新！');
+      };
+      reader.readAsDataURL(file);
+      childInput.value = '';
+    });
+  }
+  // 家長大頭貼 input
+  const parentInput = document.getElementById('parent-avatar-input');
+  if (parentInput) {
+    parentInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const sess = getSession();
+        if (!sess) return;
+        const users = getUsers();
+        users[sess.username].parentAvatar = ev.target.result;
+        saveUsers(users);
+        loadAvatar();
+        showToast('🖼️ 家長大頭貼已更新！');
+      };
+      reader.readAsDataURL(file);
+      parentInput.value = '';
+    });
+  }
 });
 
 const STORAGE_KEY = 'hujiale_users';
@@ -796,6 +843,8 @@ function selectRole(role) {
   currentRole = role;
   document.getElementById('role-child').classList.toggle('selected', role === 'child');
   document.getElementById('role-parent').classList.toggle('selected', role === 'parent');
+  const txt = document.getElementById('login-role-text');
+  if (txt) txt.textContent = role === 'child' ? '小孩' : '家長';
 }
 
 /* ────────────────────────────────
@@ -915,11 +964,34 @@ function saveMoodOnly() {
 }
 
 /* ────────────────────────────────
-   照片預覽
+   相機直接拍照（動態建立 capture input）
+──────────────────────────────── */
+function openCamera() {
+  // 移除舊的臨時 input（如有）
+  const old = document.getElementById('photo-input-camera-tmp');
+  if (old) old.remove();
+  const tmp = document.createElement('input');
+  tmp.id = 'photo-input-camera-tmp';
+  tmp.type = 'file';
+  tmp.accept = 'image/png,image/jpeg,image/jpg,image/*';
+  tmp.setAttribute('capture', 'environment');
+  tmp.style.display = 'none';
+  tmp.onchange = previewPhoto;
+  document.body.appendChild(tmp);
+  tmp.click();
+}
+
+/* ────────────────────────────────
+   照片預覽（支援所有圖片格式）
 ──────────────────────────────── */
 function previewPhoto(event) {
   const file = event.target.files[0];
   if (!file) return;
+  // 接受所有 image/* 格式
+  if (!file.type.startsWith('image/')) {
+    showToast('⚠️ 請選擇圖片檔案（png、jpg、jpeg 等）');
+    return;
+  }
   const reader = new FileReader();
   reader.onload = e => {
     selectedPhotoDataUrl = e.target.result;
@@ -1409,8 +1481,24 @@ function checkArrivalNotif() {
   if (!sess) return;
   const users = getUsers();
   const user = users[sess.username];
-  const hometime = user.hometime; // "HH:MM"
   const childname = user.childname || '孩子';
+
+  // 檢查 SOS 通知
+  const sosBanner = document.getElementById('parent-sos-banner');
+  const sosText   = document.getElementById('parent-sos-text');
+  const sosList = user.sos || [];
+  const todaySOS = sosList.filter(s => s.date === todayKey());
+  if (sosBanner) {
+    if (todaySOS.length > 0) {
+      const last = todaySOS[todaySOS.length - 1];
+      sosBanner.style.display = 'flex';
+      sosText.textContent = `🆘 ${childname} 今天 ${last.time} 發送了 SOS 緊急求助（共 ${todaySOS.length} 次），請立即確認孩子狀況！`;
+    } else {
+      sosBanner.style.display = 'none';
+    }
+  }
+
+  const hometime = user.hometime; // "HH:MM"
   const banner = document.getElementById('parent-notif-banner');
   const text   = document.getElementById('parent-notif-text');
   if (!hometime || !banner) return;
@@ -1484,11 +1572,92 @@ function childNav(tab, btn) {
 }
 
 /* ────────────────────────────────
-   SOS
+   SOS（存入 localStorage，家長端可看到）
 ──────────────────────────────── */
 function triggerSOS() {
+  if (!confirm('確定要發送 SOS 緊急求助嗎？')) return;
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  users[sess.username].sos = users[sess.username].sos || [];
+  users[sess.username].sos.push({ time: nowTime(), date: todayKey() });
+  saveUsers(users);
   showToast('🆘 SOS 已送出！照顧者即將收到通知。');
-  // 後續可串接 LINE Notify / webhook
+}
+
+/* ────────────────────────────────
+   小孩端：語音輸入訊息
+──────────────────────────────── */
+let childRecognition = null;
+let isChildRecording = false;
+
+function toggleChildRecording() {
+  const btn = document.getElementById('child-mic-btn');
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('此瀏覽器不支援語音輸入'); return; }
+  if (isChildRecording) {
+    if (childRecognition) childRecognition.stop();
+    isChildRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+    return;
+  }
+  childRecognition = new SpeechRecognition();
+  childRecognition.lang = 'zh-TW';
+  childRecognition.interimResults = false;
+  childRecognition.onresult = e => {
+    document.getElementById('child-msg-input').value = e.results[0][0].transcript;
+    isChildRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+  };
+  childRecognition.onerror = childRecognition.onend = () => {
+    isChildRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+  };
+  childRecognition.start();
+  isChildRecording = true;
+  btn.classList.add('recording');
+  btn.textContent = '⏹';
+}
+
+/* ────────────────────────────────
+   小孩端：語音輸入「今天發生的事」
+──────────────────────────────── */
+let noteRecognition = null;
+let isNoteRecording = false;
+
+function toggleNoteRecording() {
+  const btn = document.getElementById('note-mic-btn');
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('此瀏覽器不支援語音輸入'); return; }
+  if (isNoteRecording) {
+    if (noteRecognition) noteRecognition.stop();
+    isNoteRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+    return;
+  }
+  noteRecognition = new SpeechRecognition();
+  noteRecognition.lang = 'zh-TW';
+  noteRecognition.interimResults = false;
+  noteRecognition.onresult = e => {
+    const ta = document.getElementById('photo-note');
+    ta.value = (ta.value ? ta.value + ' ' : '') + e.results[0][0].transcript;
+    isNoteRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+  };
+  noteRecognition.onerror = noteRecognition.onend = () => {
+    isNoteRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+  };
+  noteRecognition.start();
+  isNoteRecording = true;
+  btn.classList.add('recording');
+  btn.textContent = '⏹';
 }
 
 /* ────────────────────────────────
