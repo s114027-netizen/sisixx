@@ -2092,6 +2092,15 @@ function stopChildGPSWatch() {
 ══════════════════════════════════════════════════════ */
 let _osmHomeMarker = null; // 家的標記（獨立存起來方便更新）
 
+function destroyMap() {
+  if (_osmMap) {
+    _osmMap.remove();
+    _osmMap = null;
+    _osmMarker = null;
+    _osmHomeMarker = null;
+  }
+}
+
 function refreshChildLocationOnMap() {
   const sess = getSession();
   if (!sess) return;
