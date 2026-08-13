@@ -497,21 +497,17 @@
             <input id="reg-hometime" type="time" value="16:00">
           </div>
           <div>
-            <label>家裡地址 🏠 <span style="font-size:12px;color:var(--muted);font-weight:400;">（三種方式擇一確認座標）</span></label>
-            <div style="display:flex;gap:8px;align-items:flex-start;flex-direction:column;">
-              <input id="reg-homeaddr" type="text" placeholder="例如：台南市永康區中正路100號">
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="geocodeHomeAddress()">🔍 搜尋地址</button>
-                <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="openRegMap()">🗺️ 在地圖上選點</button>
-                <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="useCurrentPosAsHome()">📡 用目前 GPS 定位</button>
-              </div>
-              <div id="reg-addr-result" style="font-size:13px;color:var(--muted);min-height:18px;"></div>
-              <div id="reg-map-container">
-                <div id="reg-map-div"></div>
-              </div>
-              <input type="hidden" id="reg-homelat">
-              <input type="hidden" id="reg-homelng">
+            <label>家裡位置 🏠 <span style="font-size:12px;color:var(--muted);font-weight:400;">（擇一確認座標）</span></label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="openRegMap()">🗺️ 在地圖上選點</button>
+              <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="useCurrentPosAsHome()">📡 用目前 GPS 定位</button>
             </div>
+            <div id="reg-addr-result" style="font-size:13px;color:var(--muted);min-height:18px;"></div>
+            <div id="reg-map-container">
+              <div id="reg-map-div"></div>
+            </div>
+            <input type="hidden" id="reg-homelat">
+            <input type="hidden" id="reg-homelng">
           </div>
         </div>
       </div>
@@ -748,13 +744,15 @@
             <input id="set-hometime" type="time">
           </div>
           <div>
-            <label>家裡地址 🏠</label>
-            <input id="set-homeaddr" type="text" placeholder="例如：台南市永康區中正路100號">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-              <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="geocodeSettingsAddress()">🔍 重新搜尋地址</button>
+            <label>家裡位置 🏠</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="openSettingsMap()">🗺️ 在地圖上選點</button>
               <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="useCurrentPosAsSetting()">📡 用目前 GPS</button>
             </div>
-            <div id="set-addr-result" style="font-size:13px;color:var(--muted);min-height:18px;margin-top:6px;"></div>
+            <div id="set-addr-result" style="font-size:13px;color:var(--muted);min-height:18px;"></div>
+            <div id="set-map-container" style="width:100%;height:240px;border-radius:12px;overflow:hidden;position:relative;border:1.5px solid #e0e0e0;display:none;margin-top:8px;">
+              <div id="set-map-div" style="width:100%;height:100%;"></div>
+            </div>
             <input type="hidden" id="set-homelat">
             <input type="hidden" id="set-homelng">
           </div>
@@ -1863,15 +1861,12 @@ function loadSettingsForm() {
   if (!user) return;
   document.getElementById('set-childname').value = user.childname || '';
   document.getElementById('set-hometime').value  = user.hometime  || '';
-  document.getElementById('set-homeaddr').value  = user.homeaddr  || '';
   document.getElementById('set-homelat').value   = user.homelat   || '';
   document.getElementById('set-homelng').value   = user.homelng   || '';
   const res = document.getElementById('set-addr-result');
-  if (user.homelat && user.homelng) {
-    res.innerHTML = `✅ 目前座標：緯度 ${parseFloat(user.homelat).toFixed(5)}，經度 ${parseFloat(user.homelng).toFixed(5)}`;
-  } else {
-    res.textContent = '';
-  }
+  res.innerHTML = (user.homelat && user.homelng)
+    ? `✅ 目前家的座標：緯度 ${parseFloat(user.homelat).toFixed(5)}，經度 ${parseFloat(user.homelng).toFixed(5)}`
+    : '⚠️ 尚未設定家裡位置，請用地圖選點或 GPS 定位';
 }
 
 function saveSettings() {
@@ -1879,35 +1874,60 @@ function saveSettings() {
   if (!sess) return;
   const childname = document.getElementById('set-childname').value.trim();
   const hometime  = document.getElementById('set-hometime').value;
-  const homeaddr  = document.getElementById('set-homeaddr').value.trim();
   const homelat   = document.getElementById('set-homelat').value;
   const homelng   = document.getElementById('set-homelng').value;
   if (!childname) { showToast('請填寫孩子名字'); return; }
   const users = getUsers();
   users[sess.username].childname = childname;
   users[sess.username].hometime  = hometime;
-  if (homeaddr) users[sess.username].homeaddr = homeaddr;
-  if (homelat)  users[sess.username].homelat  = parseFloat(homelat);
-  if (homelng)  users[sess.username].homelng  = parseFloat(homelng);
+  if (homelat) users[sess.username].homelat = parseFloat(homelat);
+  if (homelng) users[sess.username].homelng = parseFloat(homelng);
   saveUsers(users);
   showToast('✅ 設定已儲存！');
 }
 
-function geocodeSettingsAddress() {
-  const addr = document.getElementById('set-homeaddr').value.trim();
-  if (!addr) { showToast('請先輸入地址'); return; }
-  const res = document.getElementById('set-addr-result');
-  res.textContent = '🔍 搜尋中…';
-  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1&accept-language=zh-TW`)
-    .then(r => r.json())
-    .then(data => {
-      if (!data.length) { res.textContent = '❌ 找不到此地址'; return; }
-      const { lat, lon, display_name } = data[0];
-      document.getElementById('set-homelat').value = lat;
-      document.getElementById('set-homelng').value = lon;
-      res.innerHTML = `✅ 已找到：${display_name.slice(0,60)}…<br><span style="color:#25D366;">緯度 ${parseFloat(lat).toFixed(5)}，經度 ${parseFloat(lon).toFixed(5)}</span>`;
-    })
-    .catch(() => { res.textContent = '⚠️ 網路錯誤，請重試'; });
+/* 設定頁地圖選點 */
+let _setMap = null;
+let _setMapMarker = null;
+function openSettingsMap() {
+  const container = document.getElementById('set-map-container');
+  container.style.display = 'block';
+  function initSetMap() {
+    if (_setMap) { _setMap.invalidateSize(); return; }
+    const existingLat = parseFloat(document.getElementById('set-homelat').value) || 23.5;
+    const existingLng = parseFloat(document.getElementById('set-homelng').value) || 121.0;
+    const zoom = document.getElementById('set-homelat').value ? 16 : 8;
+    _setMap = L.map('set-map-div').setView([existingLat, existingLng], zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19
+    }).addTo(_setMap);
+    if (document.getElementById('set-homelat').value) {
+      _setMapMarker = L.marker([existingLat, existingLng], { draggable: true }).addTo(_setMap)
+        .bindPopup('家裡位置（可拖曳調整）').openPopup();
+      _setMapMarker.on('dragend', e => updateSetMarkerPos(e.target.getLatLng()));
+    }
+    _setMap.on('click', e => {
+      updateSetMarkerPos(e.latlng);
+      if (_setMapMarker) {
+        _setMapMarker.setLatLng(e.latlng).openPopup();
+      } else {
+        _setMapMarker = L.marker(e.latlng, { draggable: true }).addTo(_setMap)
+          .bindPopup('家裡位置（可拖曳調整）').openPopup();
+        _setMapMarker.on('dragend', ev => updateSetMarkerPos(ev.target.getLatLng()));
+      }
+    });
+    showToast('🗺️ 點選地圖上的家裡位置，可拖曳調整');
+  }
+  if (window.L) { initSetMap(); } else { loadLeaflet(initSetMap); }
+}
+
+function updateSetMarkerPos(latlng) {
+  const lat = latlng.lat.toFixed(6);
+  const lng = latlng.lng.toFixed(6);
+  document.getElementById('set-homelat').value = lat;
+  document.getElementById('set-homelng').value = lng;
+  document.getElementById('set-addr-result').innerHTML =
+    `✅ 已選取：緯度 ${lat}，經度 ${lng}`;
 }
 
 function useCurrentPosAsSetting() {
@@ -1919,7 +1939,8 @@ function useCurrentPosAsSetting() {
     const lng = pos.coords.longitude.toFixed(6);
     document.getElementById('set-homelat').value = lat;
     document.getElementById('set-homelng').value = lng;
-    res.innerHTML = `✅ 已使用目前位置：<span style="color:#25D366;">緯度 ${lat}，經度 ${lng}</span>`;
+    res.innerHTML = `✅ 已使用目前 GPS 位置：<span style="color:#25D366;">緯度 ${lat}，經度 ${lng}</span>`;
+    showToast('✅ 家裡座標已更新！');
   }, () => { res.textContent = '⚠️ 無法取得位置，請確認已授權定位'; },
   { enableHighAccuracy: true, timeout: 10000 });
 }
