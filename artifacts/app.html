@@ -850,6 +850,14 @@
     <div class="content" id="parent-sent-list" style="background:#ECE5DD;">
       <div class="msg-empty">還沒有對話紀錄</div>
     </div>
+    <!-- 快速提示詞 -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px 4px;background:var(--white);border-top:1px solid #e9e9e9;flex-shrink:0;">
+      <button onclick="setParentPrompt('今天有平安到家嗎？❤️')" style="font-size:12px;padding:6px 10px;border-radius:16px;border:1.5px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:inherit;">今天到家了嗎？</button>
+      <button onclick="setParentPrompt('記得吃飯喔！🍱')" style="font-size:12px;padding:6px 10px;border-radius:16px;border:1.5px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:inherit;">記得吃飯！</button>
+      <button onclick="setParentPrompt('今天在學校開心嗎？😊')" style="font-size:12px;padding:6px 10px;border-radius:16px;border:1.5px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:inherit;">今天開心嗎？</button>
+      <button onclick="setParentPrompt('爸爸媽媽很想你 ❤️')" style="font-size:12px;padding:6px 10px;border-radius:16px;border:1.5px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:inherit;">很想你！</button>
+      <button onclick="setParentPrompt('作業寫完了嗎？📚')" style="font-size:12px;padding:6px 10px;border-radius:16px;border:1.5px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:inherit;">作業寫完了嗎？</button>
+    </div>
     <div class="msg-input-row">
       <textarea id="parent-msg-input" placeholder="輸入要傳給孩子的話…" rows="1"></textarea>
       <button class="mic-btn" id="parent-mic-btn" onclick="toggleParentRecording()" title="語音輸入">🎤</button>
@@ -988,6 +996,39 @@ let _osmMarker = null;
 let _gpsWatchId = null;      // 小孩端持續定位 watch ID
 let _regMap = null;          // 註冊選點地圖
 let _regMapMarker = null;    // 註冊選點標記
+
+/* ══════════════════════════════════════════════════════
+   JSONBin 跨裝置定位設定
+══════════════════════════════════════════════════════ */
+const JSONBIN_API_KEY = '$2a$10$yZ22NdlW1ItS9BgenQx4bOdN1omHr.jEcZ8n3ULO3lenYbBVAsHzq';
+const JSONBIN_BIN_ID  = '6a7dc440f5f4af5e29112896';
+const JSONBIN_URL     = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+/* 小孩端：把 GPS 位置寫到 JSONBin */
+function pushLocationToCloud(lat, lng, time, date) {
+  fetch(JSONBIN_URL, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': JSONBIN_API_KEY
+    },
+    body: JSON.stringify({ lat, lng, time, date })
+  }).catch(() => {}); // 靜默失敗，不影響小孩操作
+}
+
+/* 家長端：從 JSONBin 讀取小孩最新位置 */
+function pullLocationFromCloud() {
+  return fetch(`${JSONBIN_URL}/latest`, {
+    headers: { 'X-Master-Key': JSONBIN_API_KEY }
+  })
+  .then(r => r.json())
+  .then(data => {
+    const loc = data.record;
+    if (loc && loc.lat && loc.lng) return loc;
+    return null;
+  })
+  .catch(() => null);
+}
 
 /* ══════════════════════════════════════════════════════
    localStorage 存取（問題 1：跨裝置同步靠匯出/匯入）
@@ -1695,6 +1736,12 @@ function renderParentSentList() {
   list.scrollTop = list.scrollHeight;
 }
 
+function setParentPrompt(text) {
+  const input = document.getElementById('parent-msg-input');
+  input.value = text;
+  input.focus();
+}
+
 function parentSendMsg() {
   const input = document.getElementById('parent-msg-input');
   const text = input.value.trim();
@@ -1902,8 +1949,11 @@ function startChildGPSWatch() {
     if (!sess) { stopChildGPSWatch(); return; }
     const users = getUsers();
     if (!users[sess.username]) { stopChildGPSWatch(); return; }
-    users[sess.username].lastLocation = { lat, lng, time: now, date: todayKey() };
+    const locData = { lat, lng, time: now, date: todayKey() };
+    users[sess.username].lastLocation = locData;
     saveUsers(users);
+    // 同步到雲端（跨裝置）
+    pushLocationToCloud(lat, lng, now, todayKey());
     // 更新狀態列 UI
     const barSpan = document.querySelector('#child-gps-bar span');
     if (barSpan) barSpan.textContent = `📡 定位中 — 最後更新 ${now}`;
@@ -2069,37 +2119,40 @@ function childReportLocation() {
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
-/* 家長端：靜默嘗試刷新地圖（進入定位頁時呼叫） */
+/* 家長端：進入定位頁時，先讀雲端再啟動輪詢 */
 let _mapPollTimer = null;
 function tryRefreshChildMap() {
   const sess = getSession();
   if (!sess) return;
-  const users = getUsers();
-  const loc = users[sess.username].lastLocation;
-  if (loc) refreshChildLocationOnMap(); // 有資料就直接顯示
-  // 啟動輪詢：每 15 秒自動重整一次（家長開著頁面等孩子回報）
+
+  // 先從雲端讀取（跨裝置同步）
+  pullLocationFromCloud().then(cloudLoc => {
+    if (cloudLoc) {
+      const users = getUsers();
+      users[sess.username].lastLocation = cloudLoc;
+      saveUsers(users);
+      refreshChildLocationOnMap();
+    } else {
+      // 雲端沒資料，試 localStorage
+      const users = getUsers();
+      if (users[sess.username].lastLocation) refreshChildLocationOnMap();
+    }
+  });
+
+  // 每 10 秒從雲端自動重整
   clearInterval(_mapPollTimer);
   _mapPollTimer = setInterval(() => {
-    // 只在定位頁顯示時才輪詢
     if (!document.getElementById('page-parent-map').classList.contains('active')) {
       clearInterval(_mapPollTimer); return;
     }
-    const fresh = getUsers()[sess.username].lastLocation;
-    if (fresh) refreshChildLocationOnMap();
-  }, 15000);
-  // 監聽 BroadcastChannel（同瀏覽器不同 tab 小孩回報）
-  try {
-    const bc = new BroadcastChannel('hujiale_location');
-    bc.onmessage = e => {
-      if (e.data.user !== sess.username) return;
-      const users2 = getUsers();
-      users2[sess.username].lastLocation = { lat: e.data.lat, lng: e.data.lng, time: e.data.time, date: e.data.date };
-      saveUsers(users2);
+    pullLocationFromCloud().then(cloudLoc => {
+      if (!cloudLoc) return;
+      const users = getUsers();
+      users[sess.username].lastLocation = cloudLoc;
+      saveUsers(users);
       refreshChildLocationOnMap();
-      showToast('📡 孩子剛剛回報了新位置！');
-      bc.close();
-    };
-  } catch(e) {}
+    });
+  }, 10000);
 }
 
 /* ══════════════════════════════════════════════════════
