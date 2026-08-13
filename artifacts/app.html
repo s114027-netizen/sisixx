@@ -1141,25 +1141,19 @@ function renderParentHistory() {
   container.innerHTML = records.map(r => {
     // 相容舊單張 photo 欄位
     const photos = r.photos || (r.photo ? [{ src: r.photo, note: r.note, time: r.time }] : []);
-    let photosHtml = '';
-    if (photos.length === 1) {
-      photosHtml = `
-        <div style="margin:6px 0;">
-          <img src="${photos[0].src}" alt="生活照" style="width:100%;border-radius:10px;cursor:pointer;" onclick="enlargePhoto('${escAttr(photos[0].src)}')">
-          ${photos[0].note ? `<div class="note" style="margin-top:4px;">${escHtml(photos[0].note)}</div>` : ''}
-          <div class="time-tag">${photos[0].time}</div>
-        </div>`;
-    } else if (photos.length > 1) {
-      photosHtml = `<div class="photo-grid" style="margin:8px 0;">
-        ${photos.map(p => `<img src="${p.src}" alt="照片" onclick="enlargePhoto('${escAttr(p.src)}')">`).join('')}
-      </div>`;
-    }
+    const photosHtml = photos.map(p => `
+      <div style="margin:6px 0;">
+        <img src="${p.src}" alt="生活照" style="width:100%;border-radius:10px;cursor:pointer;" onclick="enlargePhoto('${escAttr(p.src)}')">
+        ${p.note ? `<div class="note" style="margin-top:4px;">${escHtml(p.note)}</div>` : ''}
+        <div class="time-tag">${p.time}</div>
+      </div>
+    `).join('');
     return `
       <div class="record-day">
         <div class="date-label">${formatDate(r.date)}${photos.length > 1 ? ` · ${photos.length} 張照片` : ''}</div>
         <div class="record-card">
           ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
-          ${photosHtml}
+          ${photosHtml || '<div style="color:var(--muted);font-size:13px;">無照片</div>'}
         </div>
       </div>
     `;
