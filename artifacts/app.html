@@ -446,12 +446,12 @@
           <span style="font-size:36px;">📷</span>
           <span>請選擇下方方式上傳</span>
         </div>
-        <!-- 拍照 input（直接開鏡頭）-->
-        <input type="file" id="photo-input-camera" accept="image/*" capture="environment" onchange="previewPhoto(event)" style="display:none">
-        <!-- 相簿 input（不限格式）-->
+        <!-- 拍照：只有 capture，不加 accept，強制直接開後鏡頭 -->
+        <input type="file" id="photo-input-camera" capture="environment" onchange="previewPhoto(event)" style="display:none">
+        <!-- 相簿：只有 accept，不加 capture，讓使用者從相簿選檔案 -->
         <input type="file" id="photo-input-gallery" accept="image/*" onchange="previewPhoto(event)" style="display:none">
         <div style="display:flex;gap:10px;margin-top:12px;">
-          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="openCamera()">📷 直接拍照</button>
+          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-camera').click()">📷 直接拍照</button>
           <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-gallery').click()">🖼️ 從相簿選</button>
         </div>
         <div style="margin-top:12px;">
@@ -982,21 +982,6 @@ function saveMoodOnly() {
   rec.mood = selectedMood;
   saveUsers(users);
   document.getElementById('mood-saved-hint').style.display = 'block';
-}
-
-/* ══════════════════════════════════════════════════════
-   相機拍照（問題 3：動態決定是否使用 capture）
-══════════════════════════════════════════════════════ */
-function openCamera() {
-  // 行動裝置直接用 capture input；桌機則退化為一般相簿選取
-  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  if (isMobile) {
-    document.getElementById('photo-input-camera').click();
-  } else {
-    // 桌機沒有鏡頭，提示並改用相簿
-    showToast('💻 電腦版請改用「從相簿選」');
-    document.getElementById('photo-input-gallery').click();
-  }
 }
 
 /* ══════════════════════════════════════════════════════
