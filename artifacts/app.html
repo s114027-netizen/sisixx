@@ -376,17 +376,8 @@
           </div>
         </div>
       </div>
-      <div class="sync-hint">
-        💡 <strong>跨裝置使用說明：</strong>在登入頁可用「匯出帳號」將資料複製，再到其他裝置「匯入帳號」貼上即可同步。
-        <br><br>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button class="btn secondary" style="padding:10px;font-size:13px;" onclick="exportData()">📤 匯出帳號資料</button>
-          <button class="btn secondary" style="padding:10px;font-size:13px;" onclick="showImport()">📥 匯入帳號資料</button>
-        </div>
-        <div id="import-area" style="display:none;margin-top:10px;">
-          <textarea id="import-json" placeholder="貼上匯出的帳號 JSON 資料…" style="min-height:80px;font-size:12px;"></textarea>
-          <button class="btn" style="margin-top:8px;padding:10px;font-size:14px;" onclick="importData()">確認匯入</button>
-        </div>
+      <div id="import-area" style="display:none;">
+        <textarea id="import-json" style="display:none;"></textarea>
       </div>
     </div>
   </div>
@@ -475,12 +466,14 @@
           <span style="font-size:36px;">📷</span>
           <span>請選擇下方方式上傳</span>
         </div>
-        <!-- 相簿/檔案 input -->
-        <input type="file" id="photo-input-gallery" accept="image/*" onchange="previewPhoto(event)" style="display:none">
+        <!-- 相簿/檔案 input：multiple 允許一次選多張 -->
+        <input type="file" id="photo-input-gallery" accept="image/*" multiple onchange="previewMultiplePhotos(event)" style="display:none">
+        <!-- 多張預覽區 -->
+        <div id="multi-preview" style="display:none;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
         <!-- 兩個按鈕 -->
         <div style="display:flex;gap:10px;margin-top:12px;">
           <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="openCameraOverlay()">📷 直接拍照</button>
-          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-gallery').click()">🖼️ 從相簿選</button>
+          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-gallery').click()">🖼️ 從相簿選（可多選）</button>
         </div>
         <div style="margin-top:12px;">
           <label>想說什麼嗎？（選填）</label>
@@ -489,7 +482,7 @@
             <button class="mic-btn" id="note-mic-btn" onclick="toggleNoteRecording()" title="語音輸入" style="flex-shrink:0;">🎤</button>
           </div>
         </div>
-        <button class="btn" style="margin-top:12px;" onclick="savePhoto()">上傳今日照片 ✨</button>
+        <button class="btn" style="margin-top:12px;" onclick="saveAllPhotos()">上傳照片 ✨</button>
       </div>
 
     </div>
@@ -752,6 +745,7 @@ let currentRole = 'child';   // 登入頁目前選擇的角色
 let currentUser = null;
 let selectedMood = null;
 let selectedPhotoDataUrl = null;
+let _pendingPhotos = [];     // 多張照片待上傳暫存
 let _childRecognition = null;
 let _childIsRecording = false;
 let _parentRecognition = null;
@@ -914,12 +908,11 @@ function snapPhoto() {
   canvas.width  = video.videoWidth  || 640;
   canvas.height = video.videoHeight || 480;
   canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-  selectedPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.88);
-  const prev = document.getElementById('photo-preview');
-  prev.innerHTML = `<img src="${selectedPhotoDataUrl}" alt="預覽">`;
-  prev.classList.add('has-img');
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+  _pendingPhotos.push(dataUrl);
+  renderPendingPreviews();
   closeCameraOverlay();
-  showToast('📸 拍照成功！');
+  showToast('📸 拍照成功！可繼續加選或按「上傳」');
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1044,11 +1037,11 @@ function refreshChildHome() {
 
   selectedMood = null;
   selectedPhotoDataUrl = null;
+  _pendingPhotos = [];
   document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('mood-saved-hint').style.display = 'none';
-  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>請選擇下方方式上傳</span>';
-  document.getElementById('photo-preview').classList.remove('has-img');
   document.getElementById('photo-note').value = '';
+  renderPendingPreviews();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1116,45 +1109,81 @@ function saveMoodOnly() {
 }
 
 /* ══════════════════════════════════════════════════════
-   照片預覽（問題 5：用 Canvas 強制轉換為 JPEG，相容所有格式）
+   共用：壓縮單張圖片為 JPEG dataUrl
 ══════════════════════════════════════════════════════ */
-function previewPhoto(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  // 清空 input value，讓相同檔案可重選
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1200;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(); };
+    img.src = url;
+  });
+}
+
+/* 從相簿選（支援多選） */
+function previewMultiplePhotos(event) {
+  const files = Array.from(event.target.files);
   event.target.value = '';
+  if (!files.length) return;
+  showToast(`⏳ 載入 ${files.length} 張照片中…`);
+  Promise.all(files.map(f => compressImage(f).catch(() => null)))
+    .then(results => {
+      results.filter(Boolean).forEach(dataUrl => _pendingPhotos.push(dataUrl));
+      renderPendingPreviews();
+      showToast(`✅ 已選 ${_pendingPhotos.length} 張，可繼續加選或按「上傳」`);
+    });
+}
 
-  const objectUrl = URL.createObjectURL(file);
-  const img = new Image();
-  img.onload = () => {
-    // Canvas 壓縮：最大寬度 1200px，超過才縮放
-    const MAX = 1200;
-    let w = img.naturalWidth;
-    let h = img.naturalHeight;
-    if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    // 轉成 JPEG（相容 PNG/HEIC/WebP/BMP 等所有格式）
-    selectedPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.88);
-    URL.revokeObjectURL(objectUrl);
-
-    const prev = document.getElementById('photo-preview');
-    prev.innerHTML = `<img src="${selectedPhotoDataUrl}" alt="預覽" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+/* 重新渲染預覽區 */
+function renderPendingPreviews() {
+  const prev  = document.getElementById('photo-preview');
+  const multi = document.getElementById('multi-preview');
+  if (_pendingPhotos.length === 0) {
+    prev.innerHTML = '<span style="font-size:36px;">📷</span><span>請選擇下方方式上傳</span>';
+    prev.classList.remove('has-img');
+    multi.style.display = 'none';
+    selectedPhotoDataUrl = null;
+    return;
+  }
+  if (_pendingPhotos.length === 1) {
+    prev.innerHTML = `<img src="${_pendingPhotos[0]}" alt="預覽" style="width:100%;height:100%;object-fit:cover;display:block;">`;
     prev.classList.add('has-img');
-  };
-  img.onerror = () => {
-    URL.revokeObjectURL(objectUrl);
-    showToast('⚠️ 無法讀取此圖片，請換一張');
-  };
-  img.src = objectUrl;
+    multi.style.display = 'none';
+  } else {
+    prev.innerHTML = `<span style="font-size:22px;">🖼️</span><span>已選 ${_pendingPhotos.length} 張照片</span>`;
+    prev.classList.remove('has-img');
+    multi.style.display = 'flex';
+    multi.innerHTML = _pendingPhotos.map((src, i) => `
+      <div style="position:relative;width:76px;height:76px;">
+        <img src="${src}" style="width:76px;height:76px;object-fit:cover;border-radius:8px;display:block;">
+        <button onclick="removePending(${i})" style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:12px;cursor:pointer;padding:0;line-height:1;">✕</button>
+      </div>`).join('');
+  }
+  selectedPhotoDataUrl = _pendingPhotos[0];
+}
+
+function removePending(idx) {
+  _pendingPhotos.splice(idx, 1);
+  renderPendingPreviews();
 }
 
 /* ══════════════════════════════════════════════════════
-   儲存照片
+   儲存所有待上傳照片
 ══════════════════════════════════════════════════════ */
-function savePhoto() {
-  if (!selectedPhotoDataUrl) { showToast('請先選一張照片 📷'); return; }
+function saveAllPhotos() {
+  if (_pendingPhotos.length === 0 && !selectedPhotoDataUrl) { showToast('請先選一張照片 📷'); return; }
+  // snapPhoto 拍的單張走舊路徑放進 _pendingPhotos
+  if (_pendingPhotos.length === 0 && selectedPhotoDataUrl) _pendingPhotos.push(selectedPhotoDataUrl);
 
   const sess = getSession();
   if (!sess) return;
@@ -1166,22 +1195,25 @@ function savePhoto() {
     rec = { date: today, mood: selectedMood, photos: [], time: nowTime() };
     users[sess.username].records.push(rec);
   }
-  // 相容舊單張 photo 欄位
   if (!rec.photos) {
     rec.photos = rec.photo ? [{ src: rec.photo, note: rec.note || '', time: rec.time }] : [];
     delete rec.photo;
   }
   const note = document.getElementById('photo-note').value.trim();
-  rec.photos.push({ src: selectedPhotoDataUrl, note, time: nowTime() });
-  rec.time = nowTime();
+  const t = nowTime();
+  _pendingPhotos.forEach((src, i) => {
+    rec.photos.push({ src, note: i === 0 ? note : '', time: t });
+  });
+  rec.time = t;
   if (selectedMood) rec.mood = selectedMood;
   saveUsers(users);
 
+  const count = _pendingPhotos.length;
+  _pendingPhotos = [];
   selectedPhotoDataUrl = null;
-  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>請選擇下方方式上傳</span>';
-  document.getElementById('photo-preview').classList.remove('has-img');
   document.getElementById('photo-note').value = '';
-  showToast('🌟 照片上傳成功！可繼續新增更多照片 ✨');
+  renderPendingPreviews();
+  showToast(`🌟 ${count} 張照片上傳成功！✨`);
 }
 
 /* ══════════════════════════════════════════════════════
