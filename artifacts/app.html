@@ -2090,6 +2090,8 @@ function stopChildGPSWatch() {
 /* ══════════════════════════════════════════════════════
    家長端：讀取小孩最後回報的定位並顯示在地圖上
 ══════════════════════════════════════════════════════ */
+let _osmHomeMarker = null; // 家的標記（獨立存起來方便更新）
+
 function refreshChildLocationOnMap() {
   const sess = getSession();
   if (!sess) return;
@@ -2104,6 +2106,9 @@ function refreshChildLocationOnMap() {
   const latStr = loc.lat;
   const lngStr = loc.lng;
   const timeStr = `${loc.date || ''} ${loc.time}`;
+  const homeUser = users[sess.username];
+  const homeLat = homeUser.homelat;
+  const homeLng = homeUser.homelng;
 
   document.getElementById('map-update-time').textContent = `最後更新：${timeStr}`;
   document.getElementById('map-coords').textContent = `緯度 ${latStr}　經度 ${lngStr}`;
@@ -2111,9 +2116,17 @@ function refreshChildLocationOnMap() {
 
   function initMap() {
     if (_osmMap) {
+      // 孩子標記更新
       _osmMap.setView([lat, lng], 16);
       _osmMarker.setLatLng([lat, lng]);
       _osmMarker.setPopupContent(`<b>孩子目前位置</b><br>${latStr}, ${lngStr}<br>更新：${timeStr}`).openPopup();
+      // 家的標記：移除舊的、用最新座標重新放
+      if (_osmHomeMarker) { _osmMap.removeLayer(_osmHomeMarker); _osmHomeMarker = null; }
+      if (homeLat && homeLng) {
+        const homeIcon = L.divIcon({ html: '<div style="font-size:26px;line-height:1;">🏠</div>', className:'', iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-32] });
+        _osmHomeMarker = L.marker([homeLat, homeLng], { icon: homeIcon })
+          .addTo(_osmMap).bindPopup('<b>家裡位置</b>');
+      }
     } else {
       _osmMap = L.map('map-div').setView([lat, lng], 16);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -2122,11 +2135,10 @@ function refreshChildLocationOnMap() {
       }).addTo(_osmMap);
 
       // 家的標記
-      const homeUser = users[sess.username];
-      if (homeUser.homelat && homeUser.homelng) {
+      if (homeLat && homeLng) {
         const homeIcon = L.divIcon({ html: '<div style="font-size:26px;line-height:1;">🏠</div>', className:'', iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-32] });
-        L.marker([homeUser.homelat, homeUser.homelng], { icon: homeIcon })
-          .addTo(_osmMap).bindPopup(`<b>家裡地址</b><br>${homeUser.homeaddr || ''}`);
+        _osmHomeMarker = L.marker([homeLat, homeLng], { icon: homeIcon })
+          .addTo(_osmMap).bindPopup('<b>家裡位置</b>');
       }
 
       const icon = L.divIcon({ html: '<div style="font-size:28px;line-height:1;">🧒</div>', className: '', iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-32] });
