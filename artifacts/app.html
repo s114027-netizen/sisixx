@@ -64,7 +64,13 @@
     background: rgba(255,255,255,.25);
     display: flex; align-items: center; justify-content: center;
     font-size: 22px;
+    cursor: pointer; overflow: hidden; flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,.4);
+    transition: border-color .2s;
   }
+  .topbar .avatar:hover { border-color: rgba(255,255,255,.9); }
+  .topbar .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  #avatar-input { display: none; }
   .topbar h1 { font-size: 17px; font-weight: 700; }
   .topbar .sub { font-size: 12px; opacity: .8; }
   .topbar .back-btn {
@@ -407,7 +413,7 @@
   ════════════════════════════ -->
   <div id="page-child-home" class="page">
     <div class="topbar">
-      <div class="avatar">🧒</div>
+      <div class="avatar" id="child-avatar" onclick="document.getElementById('avatar-input').click()" title="點擊更換大頭貼">🧒</div>
       <div>
         <h1 id="child-greeting">嗨！</h1>
         <div class="sub" id="child-date"></div>
@@ -474,7 +480,7 @@
   <div id="page-child-messages" class="page">
     <div class="topbar">
       <button class="back-btn" onclick="childNav('home',null)">←</button>
-      <div class="avatar">👨‍👩‍👧</div>
+      <div class="avatar">👨‍👩‍👧</div><!-- child-messages topbar, no edit -->
       <div>
         <h1>爸爸媽媽</h1>
         <div class="sub" id="msg-parent-name">與家長對話</div>
@@ -539,7 +545,7 @@
   ════════════════════════════ -->
   <div id="page-parent-home" class="page">
     <div class="topbar parent-topbar">
-      <div class="avatar">👨‍👩‍👧</div>
+      <div class="avatar" id="parent-avatar" onclick="document.getElementById('avatar-input').click()" title="點擊更換大頭貼">👨‍👩‍👧</div>
       <div style="flex:1">
         <h1 id="parent-greeting">家長儀表板</h1>
         <div class="sub" id="parent-child-sub">查看孩子今天的狀況</div>
@@ -593,7 +599,7 @@
   <div id="page-parent-msg" class="page">
     <div class="topbar parent-topbar">
       <button class="back-btn" onclick="parentNav('home',null)">←</button>
-      <div class="avatar">🧒</div>
+      <div class="avatar">🧒</div><!-- parent-msg topbar, no edit -->
       <div><h1 id="pmsg-title">與孩子對話</h1><div class="sub" id="pmsg-sub">傳訊息給孩子</div></div>
     </div>
     <div class="content" id="parent-sent-list" style="background:#ECE5DD;">
@@ -688,6 +694,7 @@
 
   <!-- 通知吐司 -->
   <div id="toast"></div>
+  <input type="file" id="avatar-input" accept="image/*">
 </div>
 
 <script>
@@ -698,6 +705,44 @@ let currentRole = 'child';
 let currentUser = null;
 let selectedMood = null;
 let selectedPhotoDataUrl = null;
+
+/* ────────────────────────────────
+   大頭貼
+──────────────────────────────── */
+function loadAvatar() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const avatarSrc = users[sess.username] && users[sess.username].avatar;
+  const avatarEl = document.getElementById(sess.role === 'child' ? 'child-avatar' : 'parent-avatar');
+  if (!avatarEl) return;
+  if (avatarSrc) {
+    avatarEl.innerHTML = `<img src="${avatarSrc}" alt="大頭貼">`;
+  } else {
+    avatarEl.innerHTML = sess.role === 'child' ? '🧒' : '👨‍👩‍👧';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('avatar-input');
+  input.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const sess = getSession();
+      if (!sess) return;
+      const users = getUsers();
+      users[sess.username].avatar = ev.target.result;
+      saveUsers(users);
+      loadAvatar();
+      showToast('🖼️ 大頭貼已更新！');
+    };
+    reader.readAsDataURL(file);
+    // 清除 input 讓同一張照片可重複選
+    input.value = '';
+  });
+});
 
 const STORAGE_KEY = 'hujiale_users';
 const SESSION_KEY = 'hujiale_session';
@@ -796,6 +841,8 @@ function enterApp(role) {
     refreshParentHome();
     checkArrivalNotif();
   }
+  // 登入後載入大頭貼
+  setTimeout(loadAvatar, 0);
 }
 
 /* ────────────────────────────────
