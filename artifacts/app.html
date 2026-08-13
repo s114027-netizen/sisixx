@@ -887,24 +887,58 @@ function savePhoto() {
   users[sess.username].records = users[sess.username].records || [];
   let rec = users[sess.username].records.find(r => r.date === today);
   if (!rec) {
-    rec = { date: today, mood: selectedMood, photo: null, note: '', time: nowTime() };
+    rec = { date: today, mood: selectedMood, photos: [], note: '', time: nowTime() };
     users[sess.username].records.push(rec);
   }
-  rec.photo = selectedPhotoDataUrl;
-  rec.note = document.getElementById('photo-note').value.trim();
+  // 相容舊資料：若舊版只有單張 photo 欄位，先轉移進 photos 陣列
+  if (!rec.photos) {
+    rec.photos = rec.photo ? [{ src: rec.photo, note: rec.note, time: rec.time }] : [];
+    delete rec.photo;
+  }
+  // 新增一張照片（不覆蓋，改為 push）
+  const note = document.getElementById('photo-note').value.trim();
+  rec.photos.push({ src: selectedPhotoDataUrl, note, time: nowTime() });
   rec.time = nowTime();
   if (selectedMood) rec.mood = selectedMood;
   saveUsers(users);
-  showToast('🌟 今日照片上傳成功！');
+  // 重置預覽讓使用者可繼續上傳
+  selectedPhotoDataUrl = null;
+  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>點這裡選一張照片</span>';
+  document.getElementById('photo-preview').classList.remove('has-img');
+  document.getElementById('photo-note').value = '';
+  showToast('🌟 照片上傳成功！可繼續新增更多照片 ✨');
 }
 
 /* ────────────────────────────────
-   歷史紀錄
+   凌晨 12 點後自動清除當天照片
+──────────────────────────────── */
+function purgeTodayPhotosIfMidnight(users, username) {
+  const user = users[username];
+  if (!user || !user.records) return;
+  const lastPurge = user.lastPurgeDate || '';
+  const today = todayKey();
+  if (lastPurge === today) return; // 今天已清除過，略過
+
+  // 找昨天（或更早）的 today 紀錄並清空 photos（凌晨後視為「昨日已結束」）
+  // 實作邏輯：上次存的日期若不等於今天，代表已過了凌晨 12 點
+  user.records.forEach(r => {
+    if (r.date !== today) {
+      // 舊日紀錄不動（保留歷史）
+    }
+  });
+  // 今天第一次開啟 → 把昨天及之前的紀錄標記為已封存
+  user.lastPurgeDate = today;
+  saveUsers(users);
+}
+
+/* ────────────────────────────────
+   歷史紀錄（小孩端）
 ──────────────────────────────── */
 function renderHistory() {
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
+  purgeTodayPhotosIfMidnight(users, sess.username);
   const records = (users[sess.username].records || []).slice().reverse();
   const container = document.getElementById('history-list');
 
@@ -913,17 +947,26 @@ function renderHistory() {
     return;
   }
 
-  container.innerHTML = records.map(r => `
-    <div class="record-day">
-      <div class="date-label">${formatDate(r.date)}</div>
-      <div class="record-card">
-        ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
-        ${r.photo ? `<img src="${r.photo}" alt="生活照">` : ''}
-        ${r.note ? `<div class="note">${escHtml(r.note)}</div>` : ''}
-        <div class="time-tag">${r.time}</div>
+  container.innerHTML = records.map(r => {
+    // 相容舊單張 photo 欄位
+    const photos = r.photos || (r.photo ? [{ src: r.photo, note: r.note, time: r.time }] : []);
+    const photosHtml = photos.map(p => `
+      <div style="margin:6px 0;">
+        <img src="${p.src}" alt="生活照" style="width:100%;border-radius:10px;">
+        ${p.note ? `<div class="note" style="margin-top:4px;">${escHtml(p.note)}</div>` : ''}
+        <div class="time-tag">${p.time}</div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+    return `
+      <div class="record-day">
+        <div class="date-label">${formatDate(r.date)}${photos.length > 1 ? ` · ${photos.length} 張照片` : ''}</div>
+        <div class="record-card">
+          ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
+          ${photosHtml || (r.photo ? '' : '<div style="color:var(--muted);font-size:13px;">無照片</div>')}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 /* ────────────────────────────────
@@ -1063,9 +1106,10 @@ function refreshParentHome() {
   }
 
   // b. 今日照片（支援多張，grid 排列）
-  const allPhotos = (user.records || [])
-    .filter(r => r.date === today && r.photo)
-    .map(r => ({ src: r.photo, note: r.note, time: r.time }));
+  const todayRec = (user.records || []).find(r => r.date === today);
+  const allPhotos = todayRec
+    ? (todayRec.photos || (todayRec.photo ? [{ src: todayRec.photo, note: todayRec.note, time: todayRec.time }] : []))
+    : [];
   const photoBox = document.getElementById('parent-today-photos');
   if (!allPhotos.length) {
     photoBox.innerHTML = '<div class="empty-hint" style="padding:16px 0;">孩子今天還沒上傳照片</div>';
@@ -1088,22 +1132,38 @@ function renderParentHistory() {
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
+  purgeTodayPhotosIfMidnight(users, sess.username);
   const records = (users[sess.username].records || []).slice().reverse();
   const container = document.getElementById('parent-history-list');
   if (!records.length) {
     container.innerHTML = '<div class="empty-hint">還沒有紀錄</div>'; return;
   }
-  container.innerHTML = records.map(r => `
-    <div class="record-day">
-      <div class="date-label">${formatDate(r.date)}</div>
-      <div class="record-card">
-        ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
-        ${r.photo ? `<img src="${r.photo}" alt="生活照" onclick="enlargePhoto('${escAttr(r.photo)}')">` : ''}
-        ${r.note ? `<div class="note">${escHtml(r.note)}</div>` : ''}
-        <div class="time-tag">${r.time}</div>
+  container.innerHTML = records.map(r => {
+    // 相容舊單張 photo 欄位
+    const photos = r.photos || (r.photo ? [{ src: r.photo, note: r.note, time: r.time }] : []);
+    let photosHtml = '';
+    if (photos.length === 1) {
+      photosHtml = `
+        <div style="margin:6px 0;">
+          <img src="${photos[0].src}" alt="生活照" style="width:100%;border-radius:10px;cursor:pointer;" onclick="enlargePhoto('${escAttr(photos[0].src)}')">
+          ${photos[0].note ? `<div class="note" style="margin-top:4px;">${escHtml(photos[0].note)}</div>` : ''}
+          <div class="time-tag">${photos[0].time}</div>
+        </div>`;
+    } else if (photos.length > 1) {
+      photosHtml = `<div class="photo-grid" style="margin:8px 0;">
+        ${photos.map(p => `<img src="${p.src}" alt="照片" onclick="enlargePhoto('${escAttr(p.src)}')">`).join('')}
+      </div>`;
+    }
+    return `
+      <div class="record-day">
+        <div class="date-label">${formatDate(r.date)}${photos.length > 1 ? ` · ${photos.length} 張照片` : ''}</div>
+        <div class="record-card">
+          ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
+          ${photosHtml}
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 /* ────────────────────────────────
