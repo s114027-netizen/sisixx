@@ -492,12 +492,13 @@
             <input id="reg-hometime" type="time" value="16:00">
           </div>
           <div>
-            <label>家裡地址 🏠</label>
+            <label>家裡地址 🏠 <span style="font-size:12px;color:var(--muted);font-weight:400;">（三種方式擇一確認座標）</span></label>
             <div style="display:flex;gap:8px;align-items:flex-start;flex-direction:column;">
               <input id="reg-homeaddr" type="text" placeholder="例如：台南市永康區中正路100號">
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="geocodeHomeAddress()">🔍 搜尋地址</button>
                 <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="openRegMap()">🗺️ 在地圖上選點</button>
+                <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="useCurrentPosAsHome()">📡 用目前 GPS 定位</button>
               </div>
               <div id="reg-addr-result" style="font-size:13px;color:var(--muted);min-height:18px;"></div>
               <div id="reg-map-container">
@@ -781,18 +782,46 @@
       <div><h1>孩子目前位置</h1><div class="sub" id="map-update-time">—</div></div>
     </div>
     <div class="content">
+      <!-- 使用說明 -->
+      <div class="notif-banner" style="display:flex;background:#e3f2fd;border-color:#2196f3;">
+        <div class="notif-icon">ℹ️</div>
+        <div class="notif-text" style="color:#1565c0;">
+          <b>如何取得孩子位置？</b><br>
+          ① 同一台裝置：讓孩子以小孩身份登入後，切換回家長登入，位置自動顯示。<br>
+          ② 不同裝置：複製下方「定位連結」，傳送給孩子，讓孩子在自己裝置開啟並點「回報位置」，家長再按「重新整理」。
+        </div>
+      </div>
+
+      <!-- 定位連結產生 -->
+      <div class="card" style="padding:16px;">
+        <h2 style="font-size:15px;margin-bottom:10px;">📲 傳送定位連結給孩子</h2>
+        <div style="display:flex;gap:8px;">
+          <input id="child-report-link" type="text" readonly style="flex:1;font-size:12px;background:#f5f5f5;" placeholder="點右側按鈕產生連結">
+          <button class="btn secondary" style="width:auto;padding:10px 14px;font-size:13px;white-space:nowrap;" onclick="genChildReportLink()">產生連結</button>
+          <button class="btn" style="width:auto;padding:10px 14px;font-size:13px;white-space:nowrap;" onclick="copyChildReportLink()">複製</button>
+        </div>
+      </div>
+
       <div class="card">
-        <h2 style="margin-bottom:12px;">📍 即時定位</h2>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">孩子的裝置會自動回報 GPS，此處顯示最新紀錄的位置。</p>
+        <h2 style="margin-bottom:12px;">📍 孩子目前位置</h2>
         <div id="map-container">
           <div id="map-div"></div>
           <div id="map-placeholder">
             <div style="font-size:36px;margin-bottom:8px;">🗺️</div>
             <div>尚無孩子的定位資料</div>
+            <div style="font-size:12px;margin-top:4px;color:#aaa;">請參考上方說明取得位置</div>
           </div>
         </div>
         <button class="btn" style="margin-top:14px;" onclick="refreshChildLocationOnMap()">🔄 重新整理位置</button>
         <p id="map-coords" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;"></p>
+      </div>
+
+      <!-- 小孩回報位置區塊（從連結進來時顯示） -->
+      <div id="child-report-panel" class="card" style="display:none;border:2px solid var(--green);">
+        <h2 style="font-size:15px;margin-bottom:8px;color:var(--blue);">🧒 小孩定位回報</h2>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">家長傳送連結給你，請點下方按鈕回報你的位置</p>
+        <button class="btn" onclick="childReportLocation()">📡 立即回報我的位置</button>
+        <p id="child-report-status" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;"></p>
       </div>
     </div>
     <div class="bottom-nav">
@@ -1052,7 +1081,7 @@ function doRegister() {
   if (!username || !password || !childname) { showToast('請填寫所有必填欄位 ⚠️'); return; }
   if (password.length < 6) { showToast('密碼至少需要 6 個字元'); return; }
   if (password !== password2) { showToast('兩次密碼不一致 ⚠️'); return; }
-  if (!homelat || !homelng) { showToast('請先按「確認地址座標」取得家裡位置 📍'); return; }
+  if (!homelat || !homelng) { showToast('請先確認家裡地址座標 📍（搜尋地址、在地圖選點、或用 GPS 定位）'); return; }
 
   const users = getUsers();
   if (users[username]) { showToast('帳號已存在，請換一個'); return; }
@@ -1085,6 +1114,23 @@ function geocodeHomeAddress() {
       resultEl.innerHTML = `✅ 已找到：${display_name.slice(0, 60)}…<br><span style="color:#25D366;">緯度 ${parseFloat(lat).toFixed(5)}，經度 ${parseFloat(lon).toFixed(5)}</span>`;
     })
     .catch(() => { resultEl.textContent = '⚠️ 網路錯誤，請確認網路連線後重試'; });
+}
+
+/* 用目前裝置 GPS 當作家裡座標 */
+function useCurrentPosAsHome() {
+  if (!navigator.geolocation) { showToast('此瀏覽器不支援 GPS'); return; }
+  const resultEl = document.getElementById('reg-addr-result');
+  resultEl.textContent = '📡 取得目前位置中…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude.toFixed(6);
+    const lng = pos.coords.longitude.toFixed(6);
+    document.getElementById('reg-homelat').value = lat;
+    document.getElementById('reg-homelng').value = lng;
+    resultEl.innerHTML = `✅ 已使用目前 GPS 位置作為家裡：<br><span style="color:#25D366;">緯度 ${lat}，經度 ${lng}</span>`;
+    showToast('✅ 家裡座標已設定！');
+  }, () => {
+    resultEl.textContent = '⚠️ 無法取得位置，請確認已授權定位';
+  }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1625,7 +1671,7 @@ function parentNav(tab, btn) {
   if (tab === 'home')    { refreshParentHome(); checkArrivalNotif(); checkSOSBanner(); }
   if (tab === 'msg')     renderParentSentList();
   if (tab === 'history') renderParentHistory();
-  if (tab === 'map')     refreshChildLocationOnMap();
+  if (tab === 'map')     { checkChildReportParam(); tryRefreshChildMap(); }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1675,15 +1721,26 @@ function renderParentHistory() {
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
+  // 全部紀錄，不限筆數，由新到舊
   const records = (users[sess.username].records || []).slice().reverse();
   const container = document.getElementById('parent-history-list');
   if (!records.length) { container.innerHTML = '<div class="empty-hint">還沒有紀錄</div>'; return; }
 
-  container.innerHTML = records.map(r => {
+  // 依「年份」分組，產生年份標題
+  let html = '';
+  let lastYear = null;
+
+  records.forEach(r => {
+    const year = r.date ? r.date.split('-')[0] : '—';
+    if (year !== lastYear) {
+      // 加年份分隔標題
+      html += `<div style="font-size:13px;font-weight:700;color:var(--muted);padding:6px 2px 4px;border-bottom:1.5px solid #e5e7eb;margin-bottom:12px;margin-top:${lastYear ? '20px' : '0'};">${year} 年</div>`;
+      lastYear = year;
+    }
+
     const photos = r.photos || (r.photo ? [{ src: r.photo, note: r.note || '', time: r.time }] : []);
     const count = photos.length;
 
-    // 相片格子：單張滿版，多張 3 欄格子
     let gridHtml;
     if (count === 0) {
       gridHtml = `<div style="color:var(--muted);font-size:13px;padding:8px 0;">無照片</div>`;
@@ -1699,13 +1756,12 @@ function renderParentHistory() {
         <div class="album-grid-item" onclick="enlargePhoto('${escAttr(p.src)}')">
           <img src="${p.src}" alt="照片">
         </div>`).join('');
-      // 注記只顯示第一張有備註的
       const firstNote = photos.find(p => p.note);
       gridHtml = `<div class="album-grid">${items}</div>
       ${firstNote ? `<div class="album-note-row">${escHtml(firstNote.note)}</div>` : ''}`;
     }
 
-    return `
+    html += `
       <div class="album-day">
         <div class="album-day-header">
           ${r.mood ? `<div class="album-day-mood">${r.mood}</div>` : ''}
@@ -1714,7 +1770,9 @@ function renderParentHistory() {
         </div>
         ${gridHtml}
       </div>`;
-  }).join('');
+  });
+
+  container.innerHTML = html;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1823,6 +1881,113 @@ function loadLeaflet(cb) {
   s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
   s.onload = cb;
   document.head.appendChild(s);
+}
+
+/* ══════════════════════════════════════════════════════
+   跨裝置定位：產生連結 / 小孩回報 / 自動輪詢
+══════════════════════════════════════════════════════ */
+
+/* 家長端：產生給孩子的定位回報連結 */
+function genChildReportLink() {
+  const sess = getSession();
+  if (!sess) { showToast('請先登入'); return; }
+  // 在 URL hash 中帶入帳號與 action，讓小孩打開時自動顯示回報面板
+  const base = location.href.split('#')[0];
+  const link = `${base}#report:${sess.username}`;
+  document.getElementById('child-report-link').value = link;
+  showToast('✅ 連結已產生，請複製後傳給孩子');
+}
+
+function copyChildReportLink() {
+  const val = document.getElementById('child-report-link').value;
+  if (!val) { genChildReportLink(); return; }
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(val).then(() => showToast('📋 連結已複製！'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = val; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+    showToast('📋 連結已複製！');
+  }
+}
+
+/* 檢查 URL hash 是否包含 report: 指令（小孩裝置打開時） */
+function checkChildReportParam() {
+  const hash = location.hash;
+  if (!hash.startsWith('#report:')) return;
+  const targetUser = hash.slice(8); // '#report:'.length = 8
+  if (!targetUser) return;
+  // 顯示小孩回報面板
+  const panel = document.getElementById('child-report-panel');
+  if (panel) {
+    panel.style.display = 'block';
+    panel.dataset.targetUser = targetUser;
+  }
+}
+
+/* 小孩在自己裝置按「回報位置」 */
+function childReportLocation() {
+  const panel = document.getElementById('child-report-panel');
+  const targetUser = panel ? panel.dataset.targetUser : null;
+  const statusEl = document.getElementById('child-report-status');
+  if (!targetUser) { showToast('連結無效，請請家長重新產生'); return; }
+  if (!navigator.geolocation) { showToast('此瀏覽器不支援定位'); return; }
+  statusEl.textContent = '📡 取得位置中…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude.toFixed(6);
+    const lng = pos.coords.longitude.toFixed(6);
+    const now = nowTime();
+    const today = todayKey();
+    // 寫入 localStorage（同一裝置用），並同時觸發 BroadcastChannel（若支援）
+    const users = getUsers();
+    if (users[targetUser]) {
+      users[targetUser].lastLocation = { lat, lng, time: now, date: today };
+      saveUsers(users);
+    }
+    statusEl.innerHTML = `✅ 位置已回報！<br><span style="color:#25D366;">緯度 ${lat}，經度 ${lng}</span><br>時間：${now}`;
+    showToast('✅ 位置已成功回報給家長！');
+    // 嘗試透過 BroadcastChannel 通知同瀏覽器其他頁面
+    try {
+      const bc = new BroadcastChannel('hujiale_location');
+      bc.postMessage({ user: targetUser, lat, lng, time: now, date: today });
+      bc.close();
+    } catch(e) {}
+  }, () => {
+    statusEl.textContent = '⚠️ 無法取得位置，請確認已授權定位';
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+/* 家長端：靜默嘗試刷新地圖（進入定位頁時呼叫） */
+let _mapPollTimer = null;
+function tryRefreshChildMap() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const loc = users[sess.username].lastLocation;
+  if (loc) refreshChildLocationOnMap(); // 有資料就直接顯示
+  // 啟動輪詢：每 15 秒自動重整一次（家長開著頁面等孩子回報）
+  clearInterval(_mapPollTimer);
+  _mapPollTimer = setInterval(() => {
+    // 只在定位頁顯示時才輪詢
+    if (!document.getElementById('page-parent-map').classList.contains('active')) {
+      clearInterval(_mapPollTimer); return;
+    }
+    const fresh = getUsers()[sess.username].lastLocation;
+    if (fresh) refreshChildLocationOnMap();
+  }, 15000);
+  // 監聽 BroadcastChannel（同瀏覽器不同 tab 小孩回報）
+  try {
+    const bc = new BroadcastChannel('hujiale_location');
+    bc.onmessage = e => {
+      if (e.data.user !== sess.username) return;
+      const users2 = getUsers();
+      users2[sess.username].lastLocation = { lat: e.data.lat, lng: e.data.lng, time: e.data.time, date: e.data.date };
+      saveUsers(users2);
+      refreshChildLocationOnMap();
+      showToast('📡 孩子剛剛回報了新位置！');
+      bc.close();
+    };
+  } catch(e) {}
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2038,13 +2203,20 @@ function escAttr(s) {
    自動登入（問題 7：只用 session 裡的 role，不用全域 currentRole）
 ══════════════════════════════════════════════════════ */
 (function autoLogin() {
+  // 優先判斷：若 URL hash 含 #report:xxx，直接導向定位頁讓小孩回報
+  if (location.hash.startsWith('#report:')) {
+    // 顯示定位頁（不需登入）
+    showPage('page-parent-map');
+    checkChildReportParam();
+    return;
+  }
+
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
   if (!users[sess.username]) { clearSession(); return; }
   currentUser = sess.username;
   currentRole = sess.role;
-  // 更新登入頁角色選擇 UI（避免顯示錯誤）
   selectRole(sess.role);
   initDemoMessages();
   enterApp(sess.role);
