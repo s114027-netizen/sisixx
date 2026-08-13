@@ -195,8 +195,9 @@
 
   /* 訊息泡泡 */
   #page-child-messages .content { background: #ECE5DD; }
+  #page-parent-msg .content { background: #ECE5DD; }
   .msg-bubble {
-    max-width: 80%; padding: 12px 16px;
+    max-width: 75%; padding: 12px 16px;
     border-radius: 16px; font-size: 15px; line-height: 1.5;
     position: relative;
   }
@@ -205,6 +206,34 @@
     align-self: flex-start;
     border-bottom-left-radius: 4px;
     box-shadow: var(--shadow);
+  }
+  /* 含頭像的訊息列 */
+  .msg-row { display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
+  .msg-row.self { flex-direction:row-reverse; }
+  .msg-row-avatar {
+    width:32px; height:32px; border-radius:50%; flex-shrink:0;
+    background:rgba(0,0,0,.08); display:flex; align-items:center; justify-content:center;
+    font-size:18px; overflow:hidden;
+  }
+  .msg-row-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+  .msg-col { display:flex; flex-direction:column; }
+  .msg-row.self .msg-col { align-items:flex-end; }
+  /* 攝像頭拍照 overlay */
+  #camera-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.88);
+    z-index:500; display:none; flex-direction:column;
+    align-items:center; justify-content:center; gap:16px;
+  }
+  #camera-overlay.open { display:flex; }
+  #camera-video { width:min(360px,92vw); border-radius:14px; background:#000; }
+  #camera-snap-btn {
+    width:64px; height:64px; border-radius:50%; border:4px solid #fff;
+    background:rgba(255,255,255,.25); cursor:pointer; font-size:28px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #camera-close-btn {
+    position:absolute; top:20px; right:20px; background:none; border:none;
+    color:#fff; font-size:28px; cursor:pointer;
   }
   .msg-bubble .tts-btn {
     display: inline-flex; align-items: center; justify-content: center;
@@ -446,13 +475,11 @@
           <span style="font-size:36px;">📷</span>
           <span>請選擇下方方式上傳</span>
         </div>
-        <!-- 拍照：capture 直接開鏡頭（電腦＋手機都支援） -->
-        <input type="file" id="photo-input-camera" capture="environment" onchange="previewPhoto(event)" style="display:none">
-        <!-- 相簿/檔案：所有裝置通用 -->
+        <!-- 相簿/檔案 input -->
         <input type="file" id="photo-input-gallery" accept="image/*" onchange="previewPhoto(event)" style="display:none">
-        <!-- 兩個按鈕：電腦和手機都顯示 -->
+        <!-- 兩個按鈕 -->
         <div style="display:flex;gap:10px;margin-top:12px;">
-          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-camera').click()">📷 直接拍照</button>
+          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="openCameraOverlay()">📷 直接拍照</button>
           <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-gallery').click()">🖼️ 從相簿選</button>
         </div>
         <div style="margin-top:12px;">
@@ -491,7 +518,7 @@
   <div id="page-child-messages" class="page">
     <div class="topbar">
       <button class="back-btn" onclick="childNav('home',null)">←</button>
-      <div class="avatar" style="cursor:default;">👨‍👩‍👧</div>
+      <div class="avatar" id="msg-parent-avatar" style="cursor:default;">👨‍👩‍👧</div>
       <div>
         <h1>爸爸媽媽</h1>
         <div class="sub">與家長對話</div>
@@ -609,7 +636,7 @@
   <div id="page-parent-msg" class="page">
     <div class="topbar parent-topbar">
       <button class="back-btn" onclick="parentNav('home',null)">←</button>
-      <div class="avatar" style="cursor:default;">🧒</div>
+      <div class="avatar" id="msg-child-avatar" style="cursor:default;">🧒</div>
       <div><h1 id="pmsg-title">與孩子對話</h1><div class="sub" id="pmsg-sub">傳訊息給孩子</div></div>
     </div>
     <div class="content" id="parent-sent-list" style="background:#ECE5DD;">
@@ -699,6 +726,13 @@
         <span class="nav-icon">📍</span><span class="nav-label">定位</span>
       </button>
     </div>
+  </div>
+
+  <!-- 攝像頭拍照 overlay -->
+  <div id="camera-overlay">
+    <button id="camera-close-btn" onclick="closeCameraOverlay()">✕</button>
+    <video id="camera-video" autoplay playsinline muted></video>
+    <button id="camera-snap-btn" onclick="snapPhoto()" title="拍照">📸</button>
   </div>
 
   <!-- 通知吐司 -->
@@ -819,18 +853,73 @@ function loadAvatar() {
   const users = getUsers();
   const user = users[sess.username];
   if (!user) return;
-  // 小孩大頭貼
+  // 小孩大頭貼（topbar）
   const childEl = document.getElementById('child-avatar');
   if (childEl) {
-    const src = user.childAvatar || user.avatar; // 相容舊版
+    const src = user.childAvatar || user.avatar;
     childEl.innerHTML = src ? `<img src="${src}" alt="大頭貼">` : '🧒';
   }
-  // 家長大頭貼
+  // 家長大頭貼（topbar）
   const parentEl = document.getElementById('parent-avatar');
   if (parentEl) {
     const src = user.parentAvatar;
     parentEl.innerHTML = src ? `<img src="${src}" alt="大頭貼">` : '👨‍👩‍👧';
   }
+  // 對話頁頂部頭像：小孩端顯示家長頭像、家長端顯示小孩頭像
+  const msgParentEl = document.getElementById('msg-parent-avatar');
+  if (msgParentEl) {
+    const src = user.parentAvatar;
+    msgParentEl.innerHTML = src ? `<img src="${src}" alt="家長頭像">` : '👨‍👩‍👧';
+  }
+  const msgChildEl = document.getElementById('msg-child-avatar');
+  if (msgChildEl) {
+    const src = user.childAvatar || user.avatar;
+    msgChildEl.innerHTML = src ? `<img src="${src}" alt="小孩頭像">` : '🧒';
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   攝像頭拍照（電腦+手機通用，使用 getUserMedia）
+══════════════════════════════════════════════════════ */
+let _cameraStream = null;
+
+function openCameraOverlay() {
+  const overlay = document.getElementById('camera-overlay');
+  const video   = document.getElementById('camera-video');
+  overlay.classList.add('open');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+    .catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: false }))
+    .then(stream => {
+      _cameraStream = stream;
+      video.srcObject = stream;
+    })
+    .catch(() => {
+      closeCameraOverlay();
+      showToast('⚠️ 無法開啟攝像頭，請確認瀏覽器已授權');
+    });
+}
+
+function closeCameraOverlay() {
+  document.getElementById('camera-overlay').classList.remove('open');
+  if (_cameraStream) {
+    _cameraStream.getTracks().forEach(t => t.stop());
+    _cameraStream = null;
+  }
+  document.getElementById('camera-video').srcObject = null;
+}
+
+function snapPhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.createElement('canvas');
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  selectedPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+  const prev = document.getElementById('photo-preview');
+  prev.innerHTML = `<img src="${selectedPhotoDataUrl}" alt="預覽">`;
+  prev.classList.add('has-img');
+  closeCameraOverlay();
+  showToast('📸 拍照成功！');
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1135,7 +1224,13 @@ function renderMessages() {
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
-  const msgs = users[sess.username].messages || [];
+  const user = users[sess.username];
+  const msgs = user.messages || [];
+  // 取頭像
+  const childAvatarSrc  = user.childAvatar  || user.avatar || '';
+  const parentAvatarSrc = user.parentAvatar || '';
+  const childAvatarHtml  = childAvatarSrc  ? `<img src="${childAvatarSrc}">`  : '🧒';
+  const parentAvatarHtml = parentAvatarSrc ? `<img src="${parentAvatarSrc}">` : '👨‍👩‍👧';
   const list = document.getElementById('msg-bubble-list');
   if (!msgs.length) {
     list.innerHTML = '<div class="msg-empty">還沒有對話，快傳訊息給爸爸媽媽吧 💛</div>';
@@ -1144,21 +1239,29 @@ function renderMessages() {
   list.innerHTML = msgs.map((m, i) => {
     const isParent = (m.from === 'parent' || !m.from);
     if (isParent) {
+      // 家長來的訊息：左邊家長頭像
       return `
-        <div style="display:flex;flex-direction:column;align-items:flex-start;">
-          <div class="msg-bubble from-other">
-            <span>${escHtml(m.text)}</span>
-            <button class="tts-btn" id="tts-${i}" onclick="speakText(${i},'child')" title="朗讀訊息">🔊</button>
+        <div class="msg-row">
+          <div class="msg-row-avatar">${parentAvatarHtml}</div>
+          <div class="msg-col">
+            <div class="msg-bubble from-other">
+              <span>${escHtml(m.text)}</span>
+              <button class="tts-btn" id="tts-${i}" onclick="speakText(${i},'child')" title="朗讀訊息">🔊</button>
+            </div>
+            <div class="msg-meta">${m.time}</div>
           </div>
-          <div class="msg-meta">${m.time}</div>
         </div>`;
     } else {
+      // 自己（小孩）送出：右邊小孩頭像
       return `
-        <div style="display:flex;flex-direction:column;align-items:flex-end;">
-          <div class="msg-bubble" style="background:var(--bubble);border-bottom-right-radius:4px;box-shadow:var(--shadow);">
-            ${escHtml(m.text)}
+        <div class="msg-row self">
+          <div class="msg-row-avatar">${childAvatarHtml}</div>
+          <div class="msg-col">
+            <div class="msg-bubble" style="background:var(--bubble);border-bottom-right-radius:4px;box-shadow:var(--shadow);">
+              ${escHtml(m.text)}
+            </div>
+            <div class="msg-meta">${m.time}</div>
           </div>
-          <div class="msg-meta">${m.time}</div>
         </div>`;
     }
   }).join('');
@@ -1219,10 +1322,16 @@ function renderParentSentList() {
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
-  const msgs = users[sess.username].messages || [];
-  const childname = users[sess.username].childname || '孩子';
+  const user = users[sess.username];
+  const msgs = user.messages || [];
+  const childname = user.childname || '孩子';
   document.getElementById('pmsg-sub').textContent = `與 ${childname} 對話`;
   document.getElementById('pmsg-title').textContent = childname;
+  // 取頭像
+  const childAvatarSrc  = user.childAvatar  || user.avatar || '';
+  const parentAvatarSrc = user.parentAvatar || '';
+  const childAvatarHtml  = childAvatarSrc  ? `<img src="${childAvatarSrc}">`  : '🧒';
+  const parentAvatarHtml = parentAvatarSrc ? `<img src="${parentAvatarSrc}">` : '👨‍👩‍👧';
   const list = document.getElementById('parent-sent-list');
   if (!msgs.length) {
     list.innerHTML = '<div class="msg-empty">還沒有對話紀錄</div>';
@@ -1231,22 +1340,29 @@ function renderParentSentList() {
   list.innerHTML = msgs.map((m, i) => {
     const isParent = (m.from === 'parent' || !m.from);
     if (isParent) {
+      // 家長自己送出：右邊家長頭像
       return `
-        <div style="display:flex;flex-direction:column;align-items:flex-end;">
-          <div class="msg-bubble" style="background:var(--bubble);border-bottom-right-radius:4px;box-shadow:var(--shadow);">
-            ${escHtml(m.text)}
+        <div class="msg-row self">
+          <div class="msg-row-avatar">${parentAvatarHtml}</div>
+          <div class="msg-col">
+            <div class="msg-bubble" style="background:var(--bubble);border-bottom-right-radius:4px;box-shadow:var(--shadow);">
+              ${escHtml(m.text)}
+            </div>
+            <div class="msg-meta">${m.time}</div>
           </div>
-          <div class="msg-meta">${m.time}</div>
         </div>`;
     } else {
+      // 小孩來的訊息：左邊小孩頭像
       return `
-        <div style="display:flex;flex-direction:column;align-items:flex-start;">
-          <div class="msg-bubble from-other">
-            <span style="font-size:13px;color:var(--muted);display:block;margin-bottom:2px;">🧒 ${escHtml(childname)}</span>
-            <span>${escHtml(m.text)}</span>
-            <button class="tts-btn" id="ptts-${i}" onclick="speakText(${i},'parent')" title="朗讀">🔊</button>
+        <div class="msg-row">
+          <div class="msg-row-avatar">${childAvatarHtml}</div>
+          <div class="msg-col">
+            <div class="msg-bubble from-other">
+              <span>${escHtml(m.text)}</span>
+              <button class="tts-btn" id="ptts-${i}" onclick="speakText(${i},'parent')" title="朗讀">🔊</button>
+            </div>
+            <div class="msg-meta">${m.time}</div>
           </div>
-          <div class="msg-meta">${m.time}</div>
         </div>`;
     }
   }).join('');
