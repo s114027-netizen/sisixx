@@ -64,7 +64,13 @@
     background: rgba(255,255,255,.25);
     display: flex; align-items: center; justify-content: center;
     font-size: 22px;
+    cursor: pointer; overflow: hidden; flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,.4);
+    transition: border-color .2s;
   }
+  .topbar .avatar:hover { border-color: rgba(255,255,255,.9); }
+  .topbar .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  #avatar-input { display: none; }
   .topbar h1 { font-size: 17px; font-weight: 700; }
   .topbar .sub { font-size: 12px; opacity: .8; }
   .topbar .back-btn {
@@ -275,13 +281,15 @@
   .send-btn:active { transform: scale(.92); }
   /* 地圖 */
   #map-container {
-    width: 100%; height: 280px; border-radius: 14px;
+    width: 100%; height: 320px; border-radius: 14px;
     background: #e8f4ea; overflow: hidden; position: relative;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 8px;
   }
-  #map-iframe { width: 100%; height: 100%; border: none; border-radius: 14px; display: none; }
-  #map-placeholder { text-align: center; color: var(--muted); font-size: 14px; }
+  #map-div { width: 100%; height: 100%; border-radius: 14px; display: none; }
+  #map-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; color: var(--muted); font-size: 14px;
+  }
   /* 通知條 */
   .notif-banner {
     background: #fff3e0; border: 1.5px solid #ffb300;
@@ -405,7 +413,7 @@
   ════════════════════════════ -->
   <div id="page-child-home" class="page">
     <div class="topbar">
-      <div class="avatar">🧒</div>
+      <div class="avatar" id="child-avatar" onclick="document.getElementById('avatar-input').click()" title="點擊更換大頭貼">🧒</div>
       <div>
         <h1 id="child-greeting">嗨！</h1>
         <div class="sub" id="child-date"></div>
@@ -432,11 +440,18 @@
       <div class="card">
         <h2>今天的神奇照片 📸</h2>
         <p style="margin-bottom:14px;">拍一張今天最棒的畫面！</p>
-        <div id="photo-preview" onclick="document.getElementById('photo-input').click()">
+        <div id="photo-preview">
           <span style="font-size:36px;">📷</span>
-          <span>點這裡選一張照片</span>
+          <span>請選擇下方方式上傳</span>
         </div>
-        <input type="file" id="photo-input" accept="image/*" onchange="previewPhoto(event)">
+        <!-- 兩個隱藏 input：一個拍照、一個相簿 -->
+        <input type="file" id="photo-input-camera" accept="image/*" capture="environment" onchange="previewPhoto(event)" style="display:none">
+        <input type="file" id="photo-input-gallery" accept="image/*" onchange="previewPhoto(event)" style="display:none">
+        <!-- 選擇按鈕列 -->
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-camera').click()">📷 直接拍照</button>
+          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-gallery').click()">🖼️ 從相簿選</button>
+        </div>
         <div style="margin-top:12px;">
           <label>想說什麼嗎？（選填）</label>
           <textarea id="photo-note" placeholder="今天發生了什麼有趣的事…"></textarea>
@@ -472,7 +487,7 @@
   <div id="page-child-messages" class="page">
     <div class="topbar">
       <button class="back-btn" onclick="childNav('home',null)">←</button>
-      <div class="avatar">👨‍👩‍👧</div>
+      <div class="avatar">👨‍👩‍👧</div><!-- child-messages topbar, no edit -->
       <div>
         <h1>爸爸媽媽</h1>
         <div class="sub" id="msg-parent-name">與家長對話</div>
@@ -537,7 +552,7 @@
   ════════════════════════════ -->
   <div id="page-parent-home" class="page">
     <div class="topbar parent-topbar">
-      <div class="avatar">👨‍👩‍👧</div>
+      <div class="avatar" id="parent-avatar" onclick="document.getElementById('avatar-input').click()" title="點擊更換大頭貼">👨‍👩‍👧</div>
       <div style="flex:1">
         <h1 id="parent-greeting">家長儀表板</h1>
         <div class="sub" id="parent-child-sub">查看孩子今天的狀況</div>
@@ -591,7 +606,7 @@
   <div id="page-parent-msg" class="page">
     <div class="topbar parent-topbar">
       <button class="back-btn" onclick="parentNav('home',null)">←</button>
-      <div class="avatar">🧒</div>
+      <div class="avatar">🧒</div><!-- parent-msg topbar, no edit -->
       <div><h1 id="pmsg-title">與孩子對話</h1><div class="sub" id="pmsg-sub">傳訊息給孩子</div></div>
     </div>
     <div class="content" id="parent-sent-list" style="background:#ECE5DD;">
@@ -658,7 +673,7 @@
       <div class="card">
         <h2 style="margin-bottom:12px;">📍 即時定位</h2>
         <div id="map-container">
-          <iframe id="map-iframe" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <div id="map-div"></div>
           <div id="map-placeholder">
             <div style="font-size:36px;margin-bottom:8px;">🗺️</div>
             <div>點擊下方按鈕取得孩子位置</div>
@@ -686,6 +701,7 @@
 
   <!-- 通知吐司 -->
   <div id="toast"></div>
+  <input type="file" id="avatar-input" accept="image/*">
 </div>
 
 <script>
@@ -696,6 +712,44 @@ let currentRole = 'child';
 let currentUser = null;
 let selectedMood = null;
 let selectedPhotoDataUrl = null;
+
+/* ────────────────────────────────
+   大頭貼
+──────────────────────────────── */
+function loadAvatar() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const avatarSrc = users[sess.username] && users[sess.username].avatar;
+  const avatarEl = document.getElementById(sess.role === 'child' ? 'child-avatar' : 'parent-avatar');
+  if (!avatarEl) return;
+  if (avatarSrc) {
+    avatarEl.innerHTML = `<img src="${avatarSrc}" alt="大頭貼">`;
+  } else {
+    avatarEl.innerHTML = sess.role === 'child' ? '🧒' : '👨‍👩‍👧';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('avatar-input');
+  input.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const sess = getSession();
+      if (!sess) return;
+      const users = getUsers();
+      users[sess.username].avatar = ev.target.result;
+      saveUsers(users);
+      loadAvatar();
+      showToast('🖼️ 大頭貼已更新！');
+    };
+    reader.readAsDataURL(file);
+    // 清除 input 讓同一張照片可重複選
+    input.value = '';
+  });
+});
 
 const STORAGE_KEY = 'hujiale_users';
 const SESSION_KEY = 'hujiale_session';
@@ -794,6 +848,8 @@ function enterApp(role) {
     refreshParentHome();
     checkArrivalNotif();
   }
+  // 登入後載入大頭貼
+  setTimeout(loadAvatar, 0);
 }
 
 /* ────────────────────────────────
@@ -826,7 +882,7 @@ function refreshChildHome() {
   selectedPhotoDataUrl = null;
   document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('mood-saved-hint').style.display = 'none';
-  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>點這裡選一張照片</span>';
+  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>請選擇下方方式上傳</span>';
   document.getElementById('photo-preview').classList.remove('has-img');
   document.getElementById('photo-note').value = '';
 }
@@ -887,24 +943,58 @@ function savePhoto() {
   users[sess.username].records = users[sess.username].records || [];
   let rec = users[sess.username].records.find(r => r.date === today);
   if (!rec) {
-    rec = { date: today, mood: selectedMood, photo: null, note: '', time: nowTime() };
+    rec = { date: today, mood: selectedMood, photos: [], note: '', time: nowTime() };
     users[sess.username].records.push(rec);
   }
-  rec.photo = selectedPhotoDataUrl;
-  rec.note = document.getElementById('photo-note').value.trim();
+  // 相容舊資料：若舊版只有單張 photo 欄位，先轉移進 photos 陣列
+  if (!rec.photos) {
+    rec.photos = rec.photo ? [{ src: rec.photo, note: rec.note, time: rec.time }] : [];
+    delete rec.photo;
+  }
+  // 新增一張照片（不覆蓋，改為 push）
+  const note = document.getElementById('photo-note').value.trim();
+  rec.photos.push({ src: selectedPhotoDataUrl, note, time: nowTime() });
   rec.time = nowTime();
   if (selectedMood) rec.mood = selectedMood;
   saveUsers(users);
-  showToast('🌟 今日照片上傳成功！');
+  // 重置預覽讓使用者可繼續上傳
+  selectedPhotoDataUrl = null;
+  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>請選擇下方方式上傳</span>';
+  document.getElementById('photo-preview').classList.remove('has-img');
+  document.getElementById('photo-note').value = '';
+  showToast('🌟 照片上傳成功！可繼續新增更多照片 ✨');
 }
 
 /* ────────────────────────────────
-   歷史紀錄
+   凌晨 12 點後自動清除當天照片
+──────────────────────────────── */
+function purgeTodayPhotosIfMidnight(users, username) {
+  const user = users[username];
+  if (!user || !user.records) return;
+  const lastPurge = user.lastPurgeDate || '';
+  const today = todayKey();
+  if (lastPurge === today) return; // 今天已清除過，略過
+
+  // 找昨天（或更早）的 today 紀錄並清空 photos（凌晨後視為「昨日已結束」）
+  // 實作邏輯：上次存的日期若不等於今天，代表已過了凌晨 12 點
+  user.records.forEach(r => {
+    if (r.date !== today) {
+      // 舊日紀錄不動（保留歷史）
+    }
+  });
+  // 今天第一次開啟 → 把昨天及之前的紀錄標記為已封存
+  user.lastPurgeDate = today;
+  saveUsers(users);
+}
+
+/* ────────────────────────────────
+   歷史紀錄（小孩端）
 ──────────────────────────────── */
 function renderHistory() {
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
+  purgeTodayPhotosIfMidnight(users, sess.username);
   const records = (users[sess.username].records || []).slice().reverse();
   const container = document.getElementById('history-list');
 
@@ -913,17 +1003,26 @@ function renderHistory() {
     return;
   }
 
-  container.innerHTML = records.map(r => `
-    <div class="record-day">
-      <div class="date-label">${formatDate(r.date)}</div>
-      <div class="record-card">
-        ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
-        ${r.photo ? `<img src="${r.photo}" alt="生活照">` : ''}
-        ${r.note ? `<div class="note">${escHtml(r.note)}</div>` : ''}
-        <div class="time-tag">${r.time}</div>
+  container.innerHTML = records.map(r => {
+    // 相容舊單張 photo 欄位
+    const photos = r.photos || (r.photo ? [{ src: r.photo, note: r.note, time: r.time }] : []);
+    const photosHtml = photos.map(p => `
+      <div style="margin:6px 0;">
+        <img src="${p.src}" alt="生活照" style="width:100%;border-radius:10px;">
+        ${p.note ? `<div class="note" style="margin-top:4px;">${escHtml(p.note)}</div>` : ''}
+        <div class="time-tag">${p.time}</div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+    return `
+      <div class="record-day">
+        <div class="date-label">${formatDate(r.date)}${photos.length > 1 ? ` · ${photos.length} 張照片` : ''}</div>
+        <div class="record-card">
+          ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
+          ${photosHtml || (r.photo ? '' : '<div style="color:var(--muted);font-size:13px;">無照片</div>')}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 /* ────────────────────────────────
@@ -1063,9 +1162,10 @@ function refreshParentHome() {
   }
 
   // b. 今日照片（支援多張，grid 排列）
-  const allPhotos = (user.records || [])
-    .filter(r => r.date === today && r.photo)
-    .map(r => ({ src: r.photo, note: r.note, time: r.time }));
+  const todayRec = (user.records || []).find(r => r.date === today);
+  const allPhotos = todayRec
+    ? (todayRec.photos || (todayRec.photo ? [{ src: todayRec.photo, note: todayRec.note, time: todayRec.time }] : []))
+    : [];
   const photoBox = document.getElementById('parent-today-photos');
   if (!allPhotos.length) {
     photoBox.innerHTML = '<div class="empty-hint" style="padding:16px 0;">孩子今天還沒上傳照片</div>';
@@ -1088,22 +1188,32 @@ function renderParentHistory() {
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
+  purgeTodayPhotosIfMidnight(users, sess.username);
   const records = (users[sess.username].records || []).slice().reverse();
   const container = document.getElementById('parent-history-list');
   if (!records.length) {
     container.innerHTML = '<div class="empty-hint">還沒有紀錄</div>'; return;
   }
-  container.innerHTML = records.map(r => `
-    <div class="record-day">
-      <div class="date-label">${formatDate(r.date)}</div>
-      <div class="record-card">
-        ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
-        ${r.photo ? `<img src="${r.photo}" alt="生活照" onclick="enlargePhoto('${escAttr(r.photo)}')">` : ''}
-        ${r.note ? `<div class="note">${escHtml(r.note)}</div>` : ''}
-        <div class="time-tag">${r.time}</div>
+  container.innerHTML = records.map(r => {
+    // 相容舊單張 photo 欄位
+    const photos = r.photos || (r.photo ? [{ src: r.photo, note: r.note, time: r.time }] : []);
+    const photosHtml = photos.map(p => `
+      <div style="margin:6px 0;">
+        <img src="${p.src}" alt="生活照" style="width:100%;border-radius:10px;cursor:pointer;" onclick="enlargePhoto('${escAttr(p.src)}')">
+        ${p.note ? `<div class="note" style="margin-top:4px;">${escHtml(p.note)}</div>` : ''}
+        <div class="time-tag">${p.time}</div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+    return `
+      <div class="record-day">
+        <div class="date-label">${formatDate(r.date)}${photos.length > 1 ? ` · ${photos.length} 張照片` : ''}</div>
+        <div class="record-card">
+          ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
+          ${photosHtml || '<div style="color:var(--muted);font-size:13px;">無照片</div>'}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 /* ────────────────────────────────
@@ -1227,20 +1337,57 @@ function toggleRecording() {
 /* ────────────────────────────────
    家長端：地圖定位（e）
 ──────────────────────────────── */
+let _osmMap = null;
+let _osmMarker = null;
+
 function getChildLocation() {
   if (!navigator.geolocation) { showToast('瀏覽器不支援定位'); return; }
   showToast('🔍 正在取得位置…');
   navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude.toFixed(6);
-    const lng = pos.coords.longitude.toFixed(6);
+    const lat = parseFloat(pos.coords.latitude.toFixed(6));
+    const lng = parseFloat(pos.coords.longitude.toFixed(6));
     const now = nowTime();
     document.getElementById('map-update-time').textContent = `更新時間：${now}`;
     document.getElementById('map-coords').textContent = `緯度 ${lat}  經度 ${lng}`;
-    const iframe = document.getElementById('map-iframe');
-    const placeholder = document.getElementById('map-placeholder');
-    iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
-    iframe.style.display = 'block';
-    placeholder.style.display = 'none';
+    document.getElementById('map-placeholder').style.display = 'none';
+
+    const mapDiv = document.getElementById('map-div');
+    mapDiv.style.display = 'block';
+
+    // 載入 Leaflet（若尚未載入）
+    function initOsmMap() {
+      if (_osmMap) {
+        // 已存在地圖，只需移動
+        _osmMap.setView([lat, lng], 16);
+        _osmMarker.setLatLng([lat, lng]);
+      } else {
+        _osmMap = L.map('map-div').setView([lat, lng], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19
+        }).addTo(_osmMap);
+        _osmMarker = L.marker([lat, lng]).addTo(_osmMap)
+          .bindPopup('📍 孩子目前位置').openPopup();
+      }
+    }
+
+    if (window.L) {
+      initOsmMap();
+    } else {
+      // 動態載入 Leaflet CSS + JS
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initOsmMap;
+      document.head.appendChild(script);
+    }
+
     // 存入 localStorage 給後續查看
     const sess = getSession();
     if (sess) {
@@ -1248,6 +1395,7 @@ function getChildLocation() {
       users[sess.username].lastLocation = { lat, lng, time: now };
       saveUsers(users);
     }
+    showToast('📍 位置已更新！');
   }, () => {
     showToast('⚠️ 無法取得位置，請確認已授權定位');
   });
