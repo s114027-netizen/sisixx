@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回家了！偏鄉陪伴小站</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green:   #25D366;
+    --green-d: #1ebe5d;
+    --blue:    #128C7E;
+    --bg:      #ECE5DD;
+    --bubble:  #DCF8C6;
+    --white:   #ffffff;
+    --gray:    #f0f0f0;
+    --text:    #111b21;
+    --muted:   #667781;
+    --radius:  18px;
+    --shadow:  0 1px 4px rgba(0,0,0,.12);
+  }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  /* ── 外框手機殼 ── */
+  #app {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100dvh;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 32px rgba(0,0,0,.18);
+  }
+
+  /* ── 頁面切換 ── */
+  .page { display: none; flex-direction: column; flex: 1; }
+  .page.active { display: flex; }
+
+  /* ── 頂部列 ── */
+  .topbar {
+    background: var(--blue);
+    color: #fff;
+    padding: 16px 20px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .topbar h1 { font-size: 17px; font-weight: 700; }
+  .topbar .sub { font-size: 12px; opacity: .8; }
+  .topbar .back-btn {
+    background: none; border: none; color: #fff;
+    font-size: 22px; cursor: pointer; margin-right: 4px;
+  }
+
+  /* ── 捲動內容區 ── */
+  .content {
+    flex: 1; overflow-y: auto; padding: 24px 20px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  /* ── 卡片 ── */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    border: 1px solid #e9e9e9;
+  }
+  .card h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  .card p  { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* ── 表單元件 ── */
+  label { font-size: 14px; font-weight: 500; color: var(--text); display: block; margin-bottom: 6px; }
+  input[type="text"], input[type="password"], input[type="time"], textarea, select {
+    width: 100%; padding: 12px 14px;
+    border: 1.5px solid #e0e0e0; border-radius: 10px;
+    font-size: 15px; font-family: inherit; color: var(--text);
+    background: var(--gray); outline: none; transition: border .2s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--green); background: #fff; }
+  textarea { min-height: 80px; resize: vertical; }
+
+  /* ── 按鈕 ── */
+  .btn {
+    width: 100%; padding: 14px;
+    background: var(--green); color: #fff;
+    border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: background .2s, transform .1s;
+    font-family: inherit;
+  }
+  .btn:active { background: var(--green-d); transform: scale(.98); }
+  .btn.secondary {
+    background: var(--white); color: var(--blue);
+    border: 2px solid var(--blue);
+  }
+  .btn.danger { background: #e53935; }
+
+  .link-btn {
+    background: none; border: none; color: var(--blue);
+    font-size: 14px; cursor: pointer; text-decoration: underline;
+    font-family: inherit; padding: 0;
+  }
+
+  /* ── 角色選擇 ── */
+  .role-row { display: flex; gap: 14px; }
+  .role-card {
+    flex: 1; padding: 20px 12px; border-radius: 16px;
+    border: 2.5px solid #e0e0e0; background: var(--gray);
+    text-align: center; cursor: pointer; transition: all .2s;
+  }
+  .role-card.selected { border-color: var(--green); background: #e7fbe8; }
+  .role-card .icon { font-size: 40px; display: block; margin-bottom: 8px; }
+  .role-card span { font-size: 15px; font-weight: 600; color: var(--text); }
+
+  /* ── 心情選擇 ── */
+  .mood-row { display: flex; justify-content: space-around; gap: 8px; }
+  .mood-btn {
+    flex: 1; padding: 14px 6px; font-size: 36px;
+    border: 3px solid transparent; border-radius: 14px;
+    background: var(--gray); cursor: pointer; transition: all .2s;
+    text-align: center;
+  }
+  .mood-btn.selected { border-color: var(--green); background: #e7fbe8; transform: scale(1.12); }
+  .mood-label { font-size: 11px; display: block; color: var(--muted); margin-top: 4px; }
+
+  /* ── 上傳照片預覽 ── */
+  #photo-preview {
+    width: 100%; border-radius: 14px;
+    border: 2px dashed #c0c0c0; min-height: 160px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; background: var(--gray); cursor: pointer;
+    transition: border-color .2s;
+    flex-direction: column; gap: 8px; color: var(--muted); font-size: 14px;
+  }
+  #photo-preview.has-img { border-style: solid; border-color: var(--green); }
+  #photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #photo-input { display: none; }
+
+  /* ── 歷史紀錄 ── */
+  .record-day { margin-bottom: 20px; }
+  .record-day .date-label {
+    font-size: 13px; color: var(--muted); font-weight: 600;
+    margin-bottom: 10px; padding-left: 4px;
+  }
+  .record-card {
+    background: var(--bubble); border-radius: 14px;
+    padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .record-card .mood-icon { font-size: 28px; }
+  .record-card img { width: 100%; border-radius: 10px; margin: 8px 0; }
+  .record-card .note { font-size: 14px; color: var(--text); }
+  .record-card .time-tag { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .empty-hint { text-align: center; color: var(--muted); font-size: 15px; padding: 32px 0; }
+
+  /* ── 底部導覽 ── */
+  .bottom-nav {
+    display: flex; background: var(--white);
+    border-top: 1px solid #e9e9e9; padding: 8px 0 10px;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; cursor: pointer;
+    background: none; border: none; font-family: inherit;
+  }
+  .nav-item .nav-icon { font-size: 26px; }
+  .nav-item .nav-label { font-size: 11px; color: var(--muted); }
+  .nav-item.active .nav-label { color: var(--green); font-weight: 700; }
+
+  /* ── SOS 浮動按鈕 ── */
+  #sos-btn {
+    position: fixed; bottom: 80px; right: 20px;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #e53935; color: #fff; font-size: 13px; font-weight: 700;
+    border: 3px solid #fff; box-shadow: 0 4px 16px rgba(229,57,53,.45);
+    cursor: pointer; display: none; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+
+  /* ── 家長訊息頁 ── */
+  #page-child-messages .content { background: #ECE5DD; }
+
+  .msg-bubble-wrap {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .msg-bubble {
+    max-width: 80%; padding: 12px 16px;
+    border-radius: 16px; font-size: 15px; line-height: 1.5;
+    position: relative;
+  }
+  .msg-bubble.from-parent {
+    background: var(--white); color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    box-shadow: var(--shadow);
+  }
+  .msg-bubble .tts-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-left: 8px; background: none; border: none;
+    font-size: 18px; cursor: pointer; vertical-align: middle;
+    opacity: .75; transition: opacity .15s;
+  }
+  .msg-bubble .tts-btn:hover { opacity: 1; }
+  .msg-bubble .tts-btn.speaking { animation: pulse 0.7s infinite alternate; }
+  @keyframes pulse { from { opacity: .4; } to { opacity: 1; } }
+  .msg-meta {
+    font-size: 11px; color: var(--muted); margin-top: 4px;
+  }
+  .msg-empty { text-align:center; color: var(--muted); font-size:15px; padding: 40px 0; }
+
+  /* ── 家長端 ── */
+  .parent-topbar {
+    background: #075E54;
+  }
+  /* 心情大顯示 */
+  .today-mood-display {
+    font-size: 64px; text-align: center; padding: 16px 0 8px;
+  }
+  .today-mood-label {
+    text-align: center; font-size: 15px; color: var(--muted); margin-bottom: 4px;
+  }
+  /* 照片 grid */
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .photo-grid img {
+    width: 100%; aspect-ratio: 1/1; object-fit: cover;
+    border-radius: 10px; cursor: pointer;
+  }
+  .photo-grid-single img { border-radius: 14px; width: 100%; max-height: 260px; object-fit: cover; }
+  /* 訊息輸入列 */
+  .msg-input-row {
+    display: flex; gap: 8px; align-items: flex-end;
+    padding: 12px 16px; background: var(--white);
+    border-top: 1px solid #e9e9e9;
+  }
+  .msg-input-row textarea {
+    flex: 1; min-height: 44px; max-height: 100px;
+    padding: 10px 12px; border-radius: 22px;
+    border: 1.5px solid #e0e0e0; font-size: 15px;
+    resize: none; font-family: inherit; outline: none;
+  }
+  .msg-input-row textarea:focus { border-color: var(--green); }
+  .mic-btn, .send-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: none; cursor: pointer; font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: transform .15s;
+  }
+  .mic-btn { background: var(--gray); }
+  .mic-btn.recording { background: #e53935; animation: pulse 0.6s infinite alternate; }
+  .send-btn { background: var(--green); color: #fff; }
+  .send-btn:active { transform: scale(.92); }
+  /* 地圖 */
+  #map-container {
+    width: 100%; height: 280px; border-radius: 14px;
+    background: #e8f4ea; overflow: hidden; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px;
+  }
+  #map-iframe { width: 100%; height: 100%; border: none; border-radius: 14px; display: none; }
+  #map-placeholder { text-align: center; color: var(--muted); font-size: 14px; }
+  /* 通知條 */
+  .notif-banner {
+    background: #fff3e0; border: 1.5px solid #ffb300;
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .notif-banner .notif-icon { font-size: 24px; flex-shrink: 0; }
+  .notif-banner .notif-text { font-size: 14px; color: #5d4037; line-height: 1.5; }
+  .notif-banner.ok { background: #e8f5e9; border-color: var(--green); }
+  .notif-banner.ok .notif-text { color: #2e7d32; }
+
+  /* ── 通知吐司 ── */
+  #toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+    background: #333; color: #fff; padding: 12px 20px;
+    border-radius: 24px; font-size: 14px; z-index: 999;
+    transition: transform .3s ease;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ════════════════════════════
+       PAGE: 登入
+  ════════════════════════════ -->
+  <div id="page-login" class="page active">
+    <div class="topbar" style="justify-content:center;flex-direction:column;text-align:center;padding:28px 20px 20px;">
+      <div style="font-size:52px;margin-bottom:8px;">🏡</div>
+      <h1 style="font-size:22px;">回家了！</h1>
+      <div class="sub">偏鄉陪伴小站</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <h2 style="margin-bottom:16px;">登入</h2>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label>帳號</label>
+            <input id="login-username" type="text" placeholder="請輸入帳號">
+          </div>
+          <div>
+            <label>密碼</label>
+            <input id="login-password" type="password" placeholder="請輸入密碼">
+          </div>
+          <div>
+            <label style="margin-bottom:8px;">我是</label>
+            <div class="role-row">
+              <div class="role-card selected" id="role-child" onclick="selectRole('child')">
+                <span class="icon">🧒</span>
+                <span>小孩</span>
+              </div>
+              <div class="role-card" id="role-parent" onclick="selectRole('parent')">
+                <span class="icon">👨‍👩‍👧</span>
+                <span>家長</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn" onclick="doLogin()">登入</button>
+          <div style="text-align:center;">
+            <button class="link-btn" onclick="showPage('page-register')">還沒有帳號？立即註冊</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: 註冊
+  ════════════════════════════ -->
+  <div id="page-register" class="page">
+    <div class="topbar">
+      <button class="back-btn" onclick="showPage('page-login')">←</button>
+      <div>
+        <h1>建立帳號</h1>
+        <div class="sub">家長專用</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <h2 style="margin-bottom:4px;">帳號資訊</h2>
+        <p style="margin-bottom:16px;">請設定登入帳號與密碼</p>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label>帳號</label>
+            <input id="reg-username" type="text" placeholder="自訂帳號（英數字）">
+          </div>
+          <div>
+            <label>密碼</label>
+            <input id="reg-password" type="password" placeholder="至少 6 個字元">
+          </div>
+          <div>
+            <label>確認密碼</label>
+            <input id="reg-password2" type="password" placeholder="再輸入一次密碼">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-bottom:4px;">📋 小小調查</h2>
+        <p style="margin-bottom:16px;">幫助我們更了解孩子的作息 🙂</p>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label>孩子的名字（暱稱）</label>
+            <input id="reg-childname" type="text" placeholder="例如：小明、阿花">
+          </div>
+          <div>
+            <label>孩子平日放學到家時間</label>
+            <input id="reg-hometime" type="time" value="16:00">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn" onclick="doRegister()">完成註冊</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: 小孩首頁
+  ════════════════════════════ -->
+  <div id="page-child-home" class="page">
+    <div class="topbar">
+      <div class="avatar">🧒</div>
+      <div>
+        <h1 id="child-greeting">嗨！</h1>
+        <div class="sub" id="child-date"></div>
+      </div>
+      <button class="back-btn" style="margin-left:auto;" onclick="doLogout()" title="登出">⎋</button>
+    </div>
+    <div class="content">
+
+      <!-- 今日心情 -->
+      <div class="card">
+        <h2>今天心情如何？ 💬</h2>
+        <p style="margin-bottom:16px;">點一個表情告訴我們！</p>
+        <div class="mood-row" id="mood-row">
+          <button class="mood-btn" data-mood="😄" onclick="selectMood(this)">😄<span class="mood-label">超開心</span></button>
+          <button class="mood-btn" data-mood="🙂" onclick="selectMood(this)">🙂<span class="mood-label">還不錯</span></button>
+          <button class="mood-btn" data-mood="😐" onclick="selectMood(this)">😐<span class="mood-label">普普通</span></button>
+          <button class="mood-btn" data-mood="😠" onclick="selectMood(this)">😠<span class="mood-label">有點生氣</span></button>
+          <button class="mood-btn" data-mood="😢" onclick="selectMood(this)">😢<span class="mood-label">很難過</span></button>
+        </div>
+        <div id="mood-saved-hint" style="display:none;text-align:center;margin-top:12px;font-size:14px;color:#25D366;font-weight:600;">✅ 心情已記錄！</div>
+      </div>
+
+      <!-- 今日生活照 -->
+      <div class="card">
+        <h2>今天的神奇照片 📸</h2>
+        <p style="margin-bottom:14px;">拍一張今天最棒的畫面！</p>
+        <div id="photo-preview" onclick="document.getElementById('photo-input').click()">
+          <span style="font-size:36px;">📷</span>
+          <span>點這裡選一張照片</span>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" onchange="previewPhoto(event)">
+        <div style="margin-top:12px;">
+          <label>想說什麼嗎？（選填）</label>
+          <textarea id="photo-note" placeholder="今天發生了什麼有趣的事…"></textarea>
+        </div>
+        <button class="btn" style="margin-top:12px;" onclick="savePhoto()">上傳今日照片 ✨</button>
+      </div>
+
+    </div>
+
+    <!-- 底部導覽 -->
+    <div class="bottom-nav">
+      <button class="nav-item active" id="nav-home" onclick="childNav('home',this)">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">首頁</span>
+      </button>
+      <button class="nav-item" id="nav-messages" onclick="childNav('messages',this)">
+        <span class="nav-icon">💌</span>
+        <span class="nav-label">家長訊息</span>
+      </button>
+      <button class="nav-item" id="nav-history" onclick="childNav('history',this)">
+        <span class="nav-icon">📖</span>
+        <span class="nav-label">歷史紀錄</span>
+      </button>
+    </div>
+
+    <!-- SOS -->
+    <button id="sos-btn" onclick="triggerSOS()">🆘<br>SOS</button>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: 與家長對話（小孩端）
+  ════════════════════════════ -->
+  <div id="page-child-messages" class="page">
+    <div class="topbar">
+      <button class="back-btn" onclick="childNav('home',null)">←</button>
+      <div class="avatar">👨‍👩‍👧</div>
+      <div>
+        <h1>爸爸媽媽</h1>
+        <div class="sub" id="msg-parent-name">與家長對話</div>
+      </div>
+    </div>
+    <div class="content" id="msg-bubble-list" style="background:#ECE5DD;">
+      <div class="msg-empty">還沒有訊息，快傳訊息給爸爸媽媽吧 💛</div>
+    </div>
+    <!-- 輸入列 -->
+    <div class="msg-input-row">
+      <textarea id="child-msg-input" placeholder="跟爸爸媽媽說說話…" rows="1"></textarea>
+      <button class="send-btn" onclick="childSendMsg()" title="送出">➤</button>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" id="nav-home-m" onclick="childNav('home',this)">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">首頁</span>
+      </button>
+      <button class="nav-item active" id="nav-messages-m" onclick="childNav('messages',this)">
+        <span class="nav-icon">💌</span>
+        <span class="nav-label">對話</span>
+      </button>
+      <button class="nav-item" id="nav-history-m" onclick="childNav('history',this)">
+        <span class="nav-icon">📖</span>
+        <span class="nav-label">歷史紀錄</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: 歷史紀錄
+  ════════════════════════════ -->
+  <div id="page-child-history" class="page">
+    <div class="topbar">
+      <button class="back-btn" onclick="childNav('home', null)">←</button>
+      <div>
+        <h1>神奇相簿</h1>
+        <div class="sub">每天的珍貴回憶</div>
+      </div>
+    </div>
+    <div class="content" id="history-list">
+      <div class="empty-hint">還沒有紀錄，快去上傳第一張照片吧！🌟</div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" id="nav-home-h" onclick="childNav('home',this)">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">首頁</span>
+      </button>
+      <button class="nav-item" id="nav-messages-h" onclick="childNav('messages',this)">
+        <span class="nav-icon">💌</span>
+        <span class="nav-label">家長訊息</span>
+      </button>
+      <button class="nav-item active" id="nav-history-h" onclick="childNav('history',this)">
+        <span class="nav-icon">📖</span>
+        <span class="nav-label">歷史紀錄</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: 家長首頁
+  ════════════════════════════ -->
+  <div id="page-parent-home" class="page">
+    <div class="topbar parent-topbar">
+      <div class="avatar">👨‍👩‍👧</div>
+      <div style="flex:1">
+        <h1 id="parent-greeting">家長儀表板</h1>
+        <div class="sub" id="parent-child-sub">查看孩子今天的狀況</div>
+      </div>
+      <button class="back-btn" onclick="doParentLogout()" title="登出" style="font-size:18px;">⎋</button>
+    </div>
+    <div class="content">
+
+      <!-- 通知橫幅 -->
+      <div id="parent-notif-banner" class="notif-banner" style="display:none;">
+        <div class="notif-icon">⚠️</div>
+        <div class="notif-text" id="parent-notif-text"></div>
+      </div>
+
+      <!-- a. 今日心情 -->
+      <div class="card">
+        <h2>今日心情</h2>
+        <div id="parent-today-mood" class="today-mood-display">—</div>
+        <div class="today-mood-label" id="parent-mood-label">尚未記錄</div>
+      </div>
+
+      <!-- b. 今日照片 -->
+      <div class="card">
+        <h2 style="margin-bottom:12px;">今日神奇照片 📸</h2>
+        <div id="parent-today-photos">
+          <div class="empty-hint" style="padding:16px 0;">孩子今天還沒上傳照片</div>
+        </div>
+      </div>
+
+    </div>
+    <!-- 底部導覽 -->
+    <div class="bottom-nav">
+      <button class="nav-item active" id="pnav-home" onclick="parentNav('home',this)">
+        <span class="nav-icon">🏠</span><span class="nav-label">首頁</span>
+      </button>
+      <button class="nav-item" id="pnav-msg" onclick="parentNav('msg',this)">
+        <span class="nav-icon">💬</span><span class="nav-label">傳訊息</span>
+      </button>
+      <button class="nav-item" id="pnav-history" onclick="parentNav('history',this)">
+        <span class="nav-icon">📖</span><span class="nav-label">歷史相簿</span>
+      </button>
+      <button class="nav-item" id="pnav-map" onclick="parentNav('map',this)">
+        <span class="nav-icon">📍</span><span class="nav-label">定位</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: 家長傳訊息
+  ════════════════════════════ -->
+  <div id="page-parent-msg" class="page">
+    <div class="topbar parent-topbar">
+      <button class="back-btn" onclick="parentNav('home',null)">←</button>
+      <div class="avatar">🧒</div>
+      <div><h1 id="pmsg-title">與孩子對話</h1><div class="sub" id="pmsg-sub">傳訊息給孩子</div></div>
+    </div>
+    <div class="content" id="parent-sent-list" style="background:#ECE5DD;">
+      <div class="msg-empty">還沒有對話紀錄</div>
+    </div>
+    <!-- 輸入列 -->
+    <div class="msg-input-row">
+      <textarea id="parent-msg-input" placeholder="輸入要傳給孩子的話…" rows="1"></textarea>
+      <button class="mic-btn" id="parent-mic-btn" onclick="toggleRecording()" title="語音輸入">🎤</button>
+      <button class="send-btn" onclick="parentSendMsg()" title="送出">➤</button>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="parentNav('home',this)">
+        <span class="nav-icon">🏠</span><span class="nav-label">首頁</span>
+      </button>
+      <button class="nav-item active" onclick="parentNav('msg',this)">
+        <span class="nav-icon">💬</span><span class="nav-label">傳訊息</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('history',this)">
+        <span class="nav-icon">📖</span><span class="nav-label">歷史相簿</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('map',this)">
+        <span class="nav-icon">📍</span><span class="nav-label">定位</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: 家長歷史相簿
+  ════════════════════════════ -->
+  <div id="page-parent-history" class="page">
+    <div class="topbar parent-topbar">
+      <button class="back-btn" onclick="parentNav('home',null)">←</button>
+      <div><h1>孩子的神奇相簿</h1><div class="sub">所有珍貴回憶</div></div>
+    </div>
+    <div class="content" id="parent-history-list">
+      <div class="empty-hint">還沒有紀錄</div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="parentNav('home',this)">
+        <span class="nav-icon">🏠</span><span class="nav-label">首頁</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('msg',this)">
+        <span class="nav-icon">💬</span><span class="nav-label">傳訊息</span>
+      </button>
+      <button class="nav-item active" onclick="parentNav('history',this)">
+        <span class="nav-icon">📖</span><span class="nav-label">歷史相簿</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('map',this)">
+        <span class="nav-icon">📍</span><span class="nav-label">定位</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: 家長地圖定位
+  ════════════════════════════ -->
+  <div id="page-parent-map" class="page">
+    <div class="topbar parent-topbar">
+      <button class="back-btn" onclick="parentNav('home',null)">←</button>
+      <div><h1>孩子目前位置</h1><div class="sub" id="map-update-time">—</div></div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <h2 style="margin-bottom:12px;">📍 即時定位</h2>
+        <div id="map-container">
+          <iframe id="map-iframe" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <div id="map-placeholder">
+            <div style="font-size:36px;margin-bottom:8px;">🗺️</div>
+            <div>點擊下方按鈕取得孩子位置</div>
+          </div>
+        </div>
+        <button class="btn" style="margin-top:14px;" onclick="getChildLocation()">🔍 取得目前位置</button>
+        <p id="map-coords" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;"></p>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="parentNav('home',this)">
+        <span class="nav-icon">🏠</span><span class="nav-label">首頁</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('msg',this)">
+        <span class="nav-icon">💬</span><span class="nav-label">傳訊息</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('history',this)">
+        <span class="nav-icon">📖</span><span class="nav-label">歷史相簿</span>
+      </button>
+      <button class="nav-item active" onclick="parentNav('map',this)">
+        <span class="nav-icon">📍</span><span class="nav-label">定位</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 通知吐司 -->
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ────────────────────────────────
+   狀態與儲存
+──────────────────────────────── */
+let currentRole = 'child';
+let currentUser = null;
+let selectedMood = null;
+let selectedPhotoDataUrl = null;
+
+const STORAGE_KEY = 'hujiale_users';
+const SESSION_KEY = 'hujiale_session';
+
+function getUsers() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+}
+function saveUsers(u) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+}
+function getSession() {
+  return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+}
+function saveSession(s) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+}
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+/* ────────────────────────────────
+   頁面切換
+──────────────────────────────── */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('sos-btn').style.display = 'none';
+  if (id === 'page-child-home') {
+    document.getElementById('sos-btn').style.display = 'flex';
+    refreshChildHome();
+  }
+  if (id === 'page-child-history') {
+    renderHistory();
+  }
+  if (id === 'page-child-messages') {
+    renderMessages();
+  }
+}
+
+/* ────────────────────────────────
+   角色選擇
+──────────────────────────────── */
+function selectRole(role) {
+  currentRole = role;
+  document.getElementById('role-child').classList.toggle('selected', role === 'child');
+  document.getElementById('role-parent').classList.toggle('selected', role === 'parent');
+}
+
+/* ────────────────────────────────
+   註冊
+──────────────────────────────── */
+function doRegister() {
+  const username  = document.getElementById('reg-username').value.trim();
+  const password  = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  const childname = document.getElementById('reg-childname').value.trim();
+  const hometime  = document.getElementById('reg-hometime').value;
+
+  if (!username || !password || !childname) { showToast('請填寫所有必填欄位 ⚠️'); return; }
+  if (password.length < 6) { showToast('密碼至少需要 6 個字元'); return; }
+  if (password !== password2) { showToast('兩次密碼不一致 ⚠️'); return; }
+
+  const users = getUsers();
+  if (users[username]) { showToast('帳號已存在，請換一個'); return; }
+
+  users[username] = { password, childname, hometime, records: [] };
+  saveUsers(users);
+  showToast('🎉 註冊成功！請登入');
+  showPage('page-login');
+}
+
+/* ────────────────────────────────
+   登入
+──────────────────────────────── */
+function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  if (!username || !password) { showToast('請輸入帳號和密碼'); return; }
+
+  const users = getUsers();
+  if (!users[username] || users[username].password !== password) {
+    showToast('帳號或密碼錯誤 ❌'); return;
+  }
+
+  currentUser = username;
+  saveSession({ username, role: currentRole });
+  enterApp(currentRole);
+}
+
+function enterApp(role) {
+  if (role === 'child') {
+    showPage('page-child-home');
+  } else {
+    showPage('page-parent-home');
+    refreshParentHome();
+    checkArrivalNotif();
+  }
+}
+
+/* ────────────────────────────────
+   登出
+──────────────────────────────── */
+function doLogout() {
+  if (!confirm('確定要登出嗎？')) return;
+  clearSession();
+  currentUser = null;
+  showPage('page-login');
+}
+
+/* ────────────────────────────────
+   小孩首頁
+──────────────────────────────── */
+function refreshChildHome() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const user = users[sess.username];
+  const childname = user ? user.childname : '';
+
+  const hour = new Date().getHours();
+  let greet = hour < 12 ? '早安！' : hour < 17 ? '午安！' : '晚安！';
+  document.getElementById('child-greeting').textContent = greet + (childname ? ` ${childname}` : '');
+  document.getElementById('child-date').textContent = todayStr();
+
+  // 重置今日上傳狀態
+  selectedMood = null;
+  selectedPhotoDataUrl = null;
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('mood-saved-hint').style.display = 'none';
+  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>點這裡選一張照片</span>';
+  document.getElementById('photo-preview').classList.remove('has-img');
+  document.getElementById('photo-note').value = '';
+}
+
+/* ────────────────────────────────
+   心情選擇
+──────────────────────────────── */
+function selectMood(btn) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedMood = btn.dataset.mood;
+  // 立即儲存心情
+  saveMoodOnly();
+}
+
+function saveMoodOnly() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const today = todayKey();
+  users[sess.username].records = users[sess.username].records || [];
+  let rec = users[sess.username].records.find(r => r.date === today);
+  if (!rec) {
+    rec = { date: today, mood: null, photo: null, note: '', time: nowTime() };
+    users[sess.username].records.push(rec);
+  }
+  rec.mood = selectedMood;
+  saveUsers(users);
+  document.getElementById('mood-saved-hint').style.display = 'block';
+}
+
+/* ────────────────────────────────
+   照片預覽
+──────────────────────────────── */
+function previewPhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    selectedPhotoDataUrl = e.target.result;
+    const prev = document.getElementById('photo-preview');
+    prev.innerHTML = `<img src="${selectedPhotoDataUrl}" alt="預覽">`;
+    prev.classList.add('has-img');
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ────────────────────────────────
+   儲存照片
+──────────────────────────────── */
+function savePhoto() {
+  if (!selectedPhotoDataUrl) { showToast('請先選一張照片 📷'); return; }
+
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const today = todayKey();
+  users[sess.username].records = users[sess.username].records || [];
+  let rec = users[sess.username].records.find(r => r.date === today);
+  if (!rec) {
+    rec = { date: today, mood: selectedMood, photo: null, note: '', time: nowTime() };
+    users[sess.username].records.push(rec);
+  }
+  rec.photo = selectedPhotoDataUrl;
+  rec.note = document.getElementById('photo-note').value.trim();
+  rec.time = nowTime();
+  if (selectedMood) rec.mood = selectedMood;
+  saveUsers(users);
+  showToast('🌟 今日照片上傳成功！');
+}
+
+/* ────────────────────────────────
+   歷史紀錄
+──────────────────────────────── */
+function renderHistory() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const records = (users[sess.username].records || []).slice().reverse();
+  const container = document.getElementById('history-list');
+
+  if (!records.length) {
+    container.innerHTML = '<div class="empty-hint">還沒有紀錄，快去上傳第一張照片吧！🌟</div>';
+    return;
+  }
+
+  container.innerHTML = records.map(r => `
+    <div class="record-day">
+      <div class="date-label">${formatDate(r.date)}</div>
+      <div class="record-card">
+        ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
+        ${r.photo ? `<img src="${r.photo}" alt="生活照">` : ''}
+        ${r.note ? `<div class="note">${escHtml(r.note)}</div>` : ''}
+        <div class="time-tag">${r.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ────────────────────────────────
+   家長訊息（TTS 朗讀）
+──────────────────────────────── */
+/* 共用對話渲染：小孩端（看到家長訊息靠左＋🔊，自己訊息靠右） */
+function renderMessages() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const msgs = users[sess.username].messages || [];
+  const childname = users[sess.username].childname || '';
+  document.getElementById('msg-parent-name').textContent = '與爸爸媽媽對話';
+
+  const list = document.getElementById('msg-bubble-list');
+  if (!msgs.length) {
+    list.innerHTML = '<div class="msg-empty">還沒有對話，快傳訊息給爸爸媽媽吧 💛</div>';
+    list.scrollTop = list.scrollHeight; return;
+  }
+  let ttsIdx = 0;
+  list.innerHTML = msgs.map((m, i) => {
+    const isParent = (m.from === 'parent' || !m.from); // 舊資料預設為家長
+    if (isParent) {
+      const idx = ttsIdx++;
+      return `
+        <div style="display:flex;flex-direction:column;align-items:flex-start;">
+          <div class="msg-bubble from-parent">
+            <span>${escHtml(m.text)}</span>
+            <button class="tts-btn" id="tts-${i}" onclick="speakMsg(${i})" title="朗讀訊息">🔊</button>
+          </div>
+          <div class="msg-meta">${m.time}</div>
+        </div>`;
+    } else {
+      return `
+        <div style="display:flex;flex-direction:column;align-items:flex-end;">
+          <div class="msg-bubble" style="background:var(--bubble);border-bottom-right-radius:4px;box-shadow:var(--shadow);">
+            ${escHtml(m.text)}
+          </div>
+          <div class="msg-meta">${m.time}</div>
+        </div>`;
+    }
+  }).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+/* 小孩傳訊息給家長 */
+function childSendMsg() {
+  const input = document.getElementById('child-msg-input');
+  const text = input.value.trim();
+  if (!text) { showToast('請輸入要說的話'); return; }
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  users[sess.username].messages = users[sess.username].messages || [];
+  users[sess.username].messages.push({ text, time: nowTime(), from: 'child' });
+  saveUsers(users);
+  input.value = '';
+  renderMessages();
+  showToast('💌 已傳給爸爸媽媽！');
+}
+
+const _ttsTexts = [];
+function speakMsg(idx) {
+  if (!window.speechSynthesis) { showToast('此瀏覽器不支援語音朗讀'); return; }
+  window.speechSynthesis.cancel();
+  document.querySelectorAll('.tts-btn').forEach(b => b.classList.remove('speaking'));
+
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const msgs = users[sess.username].messages || [];
+  const text = msgs[idx] ? msgs[idx].text : '';
+  if (!text) return;
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'zh-TW';
+  utter.rate = 0.9;
+  const btn = document.getElementById('tts-' + idx);
+  if (btn) btn.classList.add('speaking');
+  utter.onend  = () => { if (btn) btn.classList.remove('speaking'); };
+  utter.onerror = () => { if (btn) btn.classList.remove('speaking'); };
+  window.speechSynthesis.speak(utter);
+}
+
+function initDemoMessages() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  if (!users[sess.username].messages) {
+    users[sess.username].messages = [
+      { text: '寶貝，今天有乖乖吃飯嗎？爸爸媽媽很想你 ❤️', time: '今天 17:30', from: 'parent' }
+    ];
+    saveUsers(users);
+  }
+}
+
+/* ────────────────────────────────
+   家長端：導覽
+──────────────────────────────── */
+function parentNav(tab, btn) {
+  const pageMap = {
+    home: 'page-parent-home',
+    msg:  'page-parent-msg',
+    history: 'page-parent-history',
+    map: 'page-parent-map'
+  };
+  showPage(pageMap[tab] || 'page-parent-home');
+  if (tab === 'home')    refreshParentHome();
+  if (tab === 'msg')     renderParentSentList();
+  if (tab === 'history') renderParentHistory();
+}
+
+/* ────────────────────────────────
+   家長端：首頁資料渲染（a+b）
+──────────────────────────────── */
+function refreshParentHome() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const user = users[sess.username];
+  const childname = user.childname || '孩子';
+  document.getElementById('parent-greeting').textContent = '您好，家長！';
+  document.getElementById('parent-child-sub').textContent = `${childname} 今天的狀況`;
+
+  // 取今日紀錄
+  const today = todayKey();
+  const rec = (user.records || []).find(r => r.date === today);
+
+  // a. 今日心情
+  const moodLabels = { '😄':'超開心', '🙂':'還不錯', '😐':'普普通', '😠':'有點生氣', '😢':'很難過' };
+  if (rec && rec.mood) {
+    document.getElementById('parent-today-mood').textContent = rec.mood;
+    document.getElementById('parent-mood-label').textContent = moodLabels[rec.mood] || rec.mood;
+  } else {
+    document.getElementById('parent-today-mood').textContent = '—';
+    document.getElementById('parent-mood-label').textContent = '孩子今天還沒記錄心情';
+  }
+
+  // b. 今日照片（支援多張，grid 排列）
+  const allPhotos = (user.records || [])
+    .filter(r => r.date === today && r.photo)
+    .map(r => ({ src: r.photo, note: r.note, time: r.time }));
+  const photoBox = document.getElementById('parent-today-photos');
+  if (!allPhotos.length) {
+    photoBox.innerHTML = '<div class="empty-hint" style="padding:16px 0;">孩子今天還沒上傳照片</div>';
+  } else if (allPhotos.length === 1) {
+    photoBox.innerHTML = `<div class="photo-grid-single">
+      <img src="${allPhotos[0].src}" alt="今日照片">
+      ${allPhotos[0].note ? `<p style="font-size:13px;color:var(--muted);margin-top:8px;">${escHtml(allPhotos[0].note)}</p>` : ''}
+    </div>`;
+  } else {
+    photoBox.innerHTML = `<div class="photo-grid">${
+      allPhotos.map(p => `<img src="${p.src}" alt="照片" onclick="enlargePhoto('${escAttr(p.src)}')">`).join('')
+    }</div>`;
+  }
+}
+
+/* ────────────────────────────────
+   家長端：歷史相簿（c）
+──────────────────────────────── */
+function renderParentHistory() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const records = (users[sess.username].records || []).slice().reverse();
+  const container = document.getElementById('parent-history-list');
+  if (!records.length) {
+    container.innerHTML = '<div class="empty-hint">還沒有紀錄</div>'; return;
+  }
+  container.innerHTML = records.map(r => `
+    <div class="record-day">
+      <div class="date-label">${formatDate(r.date)}</div>
+      <div class="record-card">
+        ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
+        ${r.photo ? `<img src="${r.photo}" alt="生活照" onclick="enlargePhoto('${escAttr(r.photo)}')">` : ''}
+        ${r.note ? `<div class="note">${escHtml(r.note)}</div>` : ''}
+        <div class="time-tag">${r.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ────────────────────────────────
+   家長端：傳訊息（d）
+──────────────────────────────── */
+let mediaRecorder = null;
+let isRecording = false;
+let recognition = null;
+
+/* 家長端：雙向對話渲染（家長靠右綠泡，孩子靠左白泡） */
+function renderParentSentList() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const msgs = users[sess.username].messages || [];
+  const childname = users[sess.username].childname || '孩子';
+  document.getElementById('pmsg-sub').textContent = `與 ${childname} 對話`;
+  document.getElementById('pmsg-title').textContent = childname;
+  const list = document.getElementById('parent-sent-list');
+  if (!msgs.length) {
+    list.innerHTML = '<div class="msg-empty">還沒有對話紀錄</div>';
+    list.scrollTop = list.scrollHeight; return;
+  }
+  list.innerHTML = msgs.map((m, i) => {
+    const isParent = (m.from === 'parent' || !m.from);
+    if (isParent) {
+      // 家長自己的訊息 → 右邊綠泡
+      return `
+        <div style="display:flex;flex-direction:column;align-items:flex-end;">
+          <div class="msg-bubble" style="background:var(--bubble);border-bottom-right-radius:4px;box-shadow:var(--shadow);">
+            ${escHtml(m.text)}
+          </div>
+          <div class="msg-meta">${m.time}</div>
+        </div>`;
+    } else {
+      // 孩子的訊息 → 左邊白泡 + 🔊
+      return `
+        <div style="display:flex;flex-direction:column;align-items:flex-start;">
+          <div class="msg-bubble from-parent">
+            <span style="font-size:13px;color:var(--muted);display:block;margin-bottom:2px;">🧒 ${escHtml(childname)}</span>
+            <span>${escHtml(m.text)}</span>
+            <button class="tts-btn" id="ptts-${i}" onclick="parentSpeakMsg(${i})" title="朗讀">🔊</button>
+          </div>
+          <div class="msg-meta">${m.time}</div>
+        </div>`;
+    }
+  }).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+function parentSpeakMsg(idx) {
+  if (!window.speechSynthesis) { showToast('此瀏覽器不支援語音朗讀'); return; }
+  window.speechSynthesis.cancel();
+  document.querySelectorAll('.tts-btn').forEach(b => b.classList.remove('speaking'));
+  const sess = getSession();
+  if (!sess) return;
+  const msgs = getUsers()[sess.username].messages || [];
+  const text = msgs[idx] ? msgs[idx].text : '';
+  if (!text) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'zh-TW'; utter.rate = 0.9;
+  const btn = document.getElementById('ptts-' + idx);
+  if (btn) btn.classList.add('speaking');
+  utter.onend = utter.onerror = () => { if (btn) btn.classList.remove('speaking'); };
+  window.speechSynthesis.speak(utter);
+}
+
+function parentSendMsg() {
+  const input = document.getElementById('parent-msg-input');
+  const text = input.value.trim();
+  if (!text) { showToast('請輸入訊息內容'); return; }
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  users[sess.username].messages = users[sess.username].messages || [];
+  users[sess.username].messages.push({ text, time: nowTime(), from: 'parent' });
+  saveUsers(users);
+  input.value = '';
+  renderParentSentList();
+  showToast('✅ 訊息已傳送給孩子！');
+}
+
+function toggleRecording() {
+  const btn = document.getElementById('parent-mic-btn');
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('此瀏覽器不支援語音輸入'); return; }
+  if (isRecording) {
+    if (recognition) recognition.stop();
+    isRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = 'zh-TW';
+  recognition.interimResults = false;
+  recognition.onresult = e => {
+    const transcript = e.results[0][0].transcript;
+    document.getElementById('parent-msg-input').value = transcript;
+    isRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+  };
+  recognition.onerror = () => {
+    isRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+    showToast('語音辨識失敗，請重試');
+  };
+  recognition.onend = () => {
+    isRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+  };
+  recognition.start();
+  isRecording = true;
+  btn.classList.add('recording');
+  btn.textContent = '⏹';
+}
+
+/* ────────────────────────────────
+   家長端：地圖定位（e）
+──────────────────────────────── */
+function getChildLocation() {
+  if (!navigator.geolocation) { showToast('瀏覽器不支援定位'); return; }
+  showToast('🔍 正在取得位置…');
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude.toFixed(6);
+    const lng = pos.coords.longitude.toFixed(6);
+    const now = nowTime();
+    document.getElementById('map-update-time').textContent = `更新時間：${now}`;
+    document.getElementById('map-coords').textContent = `緯度 ${lat}  經度 ${lng}`;
+    const iframe = document.getElementById('map-iframe');
+    const placeholder = document.getElementById('map-placeholder');
+    iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
+    iframe.style.display = 'block';
+    placeholder.style.display = 'none';
+    // 存入 localStorage 給後續查看
+    const sess = getSession();
+    if (sess) {
+      const users = getUsers();
+      users[sess.username].lastLocation = { lat, lng, time: now };
+      saveUsers(users);
+    }
+  }, () => {
+    showToast('⚠️ 無法取得位置，請確認已授權定位');
+  });
+}
+
+/* ────────────────────────────────
+   家長端：超時未到家通知（f）
+──────────────────────────────── */
+function checkArrivalNotif() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const user = users[sess.username];
+  const hometime = user.hometime; // "HH:MM"
+  const childname = user.childname || '孩子';
+  const banner = document.getElementById('parent-notif-banner');
+  const text   = document.getElementById('parent-notif-text');
+  if (!hometime || !banner) return;
+
+  const [hh, mm] = hometime.split(':').map(Number);
+  const now = new Date();
+  const deadlineMin = hh * 60 + mm + 30; // 預定時間 + 30 分鐘
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  // 檢查今天孩子有無任何打卡（記錄心情或上傳照片）
+  const today = todayKey();
+  const rec = (user.records || []).find(r => r.date === today);
+  const childCheckedIn = !!(rec && (rec.mood || rec.photo));
+
+  banner.style.display = 'flex';
+
+  if (nowMin < hh * 60 + mm) {
+    // 還沒到預定時間
+    banner.className = 'notif-banner ok';
+    banner.querySelector('.notif-icon').textContent = '🕐';
+    text.textContent = `${childname} 的預定到家時間是 ${hometime}，還沒到喔！`;
+  } else if (nowMin >= deadlineMin && !childCheckedIn) {
+    // 超時 30 分鐘且沒有打卡
+    banner.className = 'notif-banner';
+    banner.querySelector('.notif-icon').textContent = '⚠️';
+    text.textContent = `⚠️ 注意！${childname} 預定 ${hometime} 到家，現在已超過 30 分鐘還沒有打卡紀錄，請確認孩子狀況！`;
+  } else if (childCheckedIn) {
+    banner.className = 'notif-banner ok';
+    banner.querySelector('.notif-icon').textContent = '✅';
+    text.textContent = `${childname} 今天已有打卡紀錄，一切安全 😊`;
+  } else {
+    banner.className = 'notif-banner ok';
+    banner.querySelector('.notif-icon').textContent = '🏠';
+    text.textContent = `${childname} 預定到家時間 ${hometime}，在超過時間 30 分鐘後若無打卡將自動提醒。`;
+  }
+}
+
+/* ────────────────────────────────
+   家長端：放大查看照片
+──────────────────────────────── */
+function enlargePhoto(src) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `<img src="${src}" style="max-width:95vw;max-height:90vh;border-radius:12px;">`;
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+}
+
+/* ────────────────────────────────
+   家長端：登出
+──────────────────────────────── */
+function doParentLogout() {
+  if (!confirm('確定要登出嗎？')) return;
+  clearSession();
+  currentUser = null;
+  showPage('page-login');
+}
+
+/* ────────────────────────────────
+   底部導覽
+──────────────────────────────── */
+function childNav(tab, btn) {
+  if (tab === 'home') {
+    showPage('page-child-home');
+  } else if (tab === 'messages') {
+    showPage('page-child-messages');
+    renderMessages();
+  } else {
+    showPage('page-child-history');
+  }
+}
+
+/* ────────────────────────────────
+   SOS
+──────────────────────────────── */
+function triggerSOS() {
+  showToast('🆘 SOS 已送出！照顧者即將收到通知。');
+  // 後續可串接 LINE Notify / webhook
+}
+
+/* ────────────────────────────────
+   吐司通知
+──────────────────────────────── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ────────────────────────────────
+   工具函式
+──────────────────────────────── */
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日`;
+}
+function formatDate(key) {
+  const [y,m,d] = key.split('-');
+  return `${y} 年 ${parseInt(m)} 月 ${parseInt(d)} 日`;
+}
+function nowTime() {
+  const d = new Date();
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function pad(n) { return String(n).padStart(2,'0'); }
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(s) {
+  return s.replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+}
+
+/* ────────────────────────────────
+   自動登入（長期保持登入）
+──────────────────────────────── */
+(function autoLogin() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  if (!users[sess.username]) { clearSession(); return; }
+  currentUser = sess.username;
+  currentRole = sess.role;
+  initDemoMessages();
+  enterApp(sess.role);
+})();
+</script>
+</body>
+</html>
