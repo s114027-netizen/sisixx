@@ -398,6 +398,11 @@
     border-radius: 10px; padding: 10px 14px;
     font-size: 13px; color: #1565c0; line-height: 1.5;
   }
+
+  /* 僅電腦版顯示（手機版隱藏） */
+  @media (max-width: 520px) {
+    .desktop-only { display: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -488,7 +493,7 @@
             <input id="reg-childname" type="text" placeholder="例如：小明、阿花">
           </div>
           <div>
-            <label>孩子平日放學到家時間</label>
+            <label>孩子平日到家時間</label>
             <input id="reg-hometime" type="time" value="16:00">
           </div>
           <div>
@@ -515,11 +520,63 @@
   </div>
 
   <!-- ════════════════════════════
+       PAGE: 小孩設定
+  ════════════════════════════ -->
+  <div id="page-child-settings" class="page">
+    <div class="topbar">
+      <button class="back-btn" onclick="childNav('home',null)">←</button>
+      <div><h1>設定</h1><div class="sub">個人設定</div></div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <h2 style="margin-bottom:16px;">🖼️ 更換大頭貼</h2>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+          <div class="avatar" id="settings-child-avatar" onclick="triggerAvatarUpload('child')" title="點擊更換" style="width:64px;height:64px;font-size:36px;cursor:pointer;border:2.5px solid var(--green);">🧒</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">小孩大頭貼</div>
+            <button class="btn secondary" style="width:auto;padding:8px 16px;font-size:13px;" onclick="triggerAvatarUpload('child')">選擇照片</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 背景顏色（僅電腦版顯示） -->
+      <div class="card desktop-only">
+        <h2 style="margin-bottom:12px;">🎨 背景顏色</h2>
+        <p style="margin-bottom:14px;">更換應用程式的背景底色</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="setBgColor('#ECE5DD')" style="width:44px;height:44px;border-radius:50%;background:#ECE5DD;border:3px solid #ccc;cursor:pointer;" title="預設米色"></button>
+          <button onclick="setBgColor('#ffffff')" style="width:44px;height:44px;border-radius:50%;background:#ffffff;border:3px solid #ccc;cursor:pointer;" title="白色"></button>
+          <button onclick="setBgColor('#e3f2fd')" style="width:44px;height:44px;border-radius:50%;background:#e3f2fd;border:3px solid #ccc;cursor:pointer;" title="淺藍"></button>
+          <button onclick="setBgColor('#e8f5e9')" style="width:44px;height:44px;border-radius:50%;background:#e8f5e9;border:3px solid #ccc;cursor:pointer;" title="淺綠"></button>
+          <button onclick="setBgColor('#fff3e0')" style="width:44px;height:44px;border-radius:50%;background:#fff3e0;border:3px solid #ccc;cursor:pointer;" title="淺橘"></button>
+          <button onclick="setBgColor('#fce4ec')" style="width:44px;height:44px;border-radius:50%;background:#fce4ec;border:3px solid #ccc;cursor:pointer;" title="淺粉"></button>
+        </div>
+      </div>
+
+      <button class="btn danger" onclick="doLogout()">登出</button>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="childNav('home',this)">
+        <span class="nav-icon">🏠</span><span class="nav-label">首頁</span>
+      </button>
+      <button class="nav-item" onclick="childNav('messages',this)">
+        <span class="nav-icon">💌</span><span class="nav-label">家長訊息</span>
+      </button>
+      <button class="nav-item" onclick="childNav('today',this)">
+        <span class="nav-icon">📷</span><span class="nav-label">今日照片</span>
+      </button>
+      <button class="nav-item active" onclick="childNav('settings',this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">設定</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
        PAGE: 小孩首頁
   ════════════════════════════ -->
   <div id="page-child-home" class="page">
     <div class="topbar">
-      <div class="avatar" id="child-avatar" onclick="triggerAvatarUpload('child')" title="點擊更換大頭貼">🧒</div>
+      <div class="avatar" id="child-avatar" onclick="childNav('settings',null)" title="點擊進入設定">🧒</div>
       <div>
         <h1 id="child-greeting">嗨！</h1>
         <div class="sub" id="child-date"></div>
@@ -586,9 +643,13 @@
         <span class="nav-icon">💌</span>
         <span class="nav-label">家長訊息</span>
       </button>
-      <button class="nav-item" onclick="childNav('history',this)">
-        <span class="nav-icon">📖</span>
-        <span class="nav-label">歷史紀錄</span>
+      <button class="nav-item" onclick="childNav('today',this)">
+        <span class="nav-icon">📷</span>
+        <span class="nav-label">今日照片</span>
+      </button>
+      <button class="nav-item" onclick="childNav('settings',this)">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">設定</span>
       </button>
     </div>
 
@@ -622,25 +683,28 @@
       <button class="nav-item active" onclick="childNav('messages',this)">
         <span class="nav-icon">💌</span><span class="nav-label">對話</span>
       </button>
-      <button class="nav-item" onclick="childNav('history',this)">
-        <span class="nav-icon">📖</span><span class="nav-label">歷史紀錄</span>
+      <button class="nav-item" onclick="childNav('today',this)">
+        <span class="nav-icon">📷</span><span class="nav-label">今日照片</span>
+      </button>
+      <button class="nav-item" onclick="childNav('settings',this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">設定</span>
       </button>
     </div>
   </div>
 
   <!-- ════════════════════════════
-       PAGE: 歷史紀錄
+       PAGE: 今日照片（小孩端）
   ════════════════════════════ -->
-  <div id="page-child-history" class="page">
+  <div id="page-child-today" class="page">
     <div class="topbar">
       <button class="back-btn" onclick="childNav('home',null)">←</button>
       <div>
-        <h1>神奇相簿</h1>
-        <div class="sub">每天的珍貴回憶</div>
+        <h1>今日照片 📷</h1>
+        <div class="sub" id="today-photos-date"></div>
       </div>
     </div>
-    <div class="content" id="history-list">
-      <div class="empty-hint">還沒有紀錄，快去上傳第一張照片吧！🌟</div>
+    <div class="content" id="today-photos-list">
+      <div class="empty-hint">今天還沒有照片，快去上傳吧！📸</div>
     </div>
     <div class="bottom-nav">
       <button class="nav-item" onclick="childNav('home',this)">
@@ -649,8 +713,66 @@
       <button class="nav-item" onclick="childNav('messages',this)">
         <span class="nav-icon">💌</span><span class="nav-label">家長訊息</span>
       </button>
-      <button class="nav-item active" onclick="childNav('history',this)">
-        <span class="nav-icon">📖</span><span class="nav-label">歷史紀錄</span>
+      <button class="nav-item active" onclick="childNav('today',this)">
+        <span class="nav-icon">📷</span><span class="nav-label">今日照片</span>
+      </button>
+      <button class="nav-item" onclick="childNav('settings',this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">設定</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: 家長設定
+  ════════════════════════════ -->
+  <div id="page-parent-settings" class="page">
+    <div class="topbar parent-topbar">
+      <button class="back-btn" onclick="parentNav('home',null)">←</button>
+      <div><h1>設定</h1><div class="sub">個人設定</div></div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <h2 style="margin-bottom:16px;">🖼️ 更換大頭貼</h2>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+          <div class="avatar" id="settings-parent-avatar" onclick="triggerAvatarUpload('parent')" title="點擊更換" style="width:64px;height:64px;font-size:36px;cursor:pointer;border:2.5px solid var(--green);">👨‍👩‍👧</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">家長大頭貼</div>
+            <button class="btn secondary" style="width:auto;padding:8px 16px;font-size:13px;" onclick="triggerAvatarUpload('parent')">選擇照片</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 背景顏色（僅電腦版顯示） -->
+      <div class="card desktop-only">
+        <h2 style="margin-bottom:12px;">🎨 背景顏色</h2>
+        <p style="margin-bottom:14px;">更換應用程式的背景底色</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="setBgColor('#ECE5DD')" style="width:44px;height:44px;border-radius:50%;background:#ECE5DD;border:3px solid #ccc;cursor:pointer;" title="預設米色"></button>
+          <button onclick="setBgColor('#ffffff')" style="width:44px;height:44px;border-radius:50%;background:#ffffff;border:3px solid #ccc;cursor:pointer;" title="白色"></button>
+          <button onclick="setBgColor('#e3f2fd')" style="width:44px;height:44px;border-radius:50%;background:#e3f2fd;border:3px solid #ccc;cursor:pointer;" title="淺藍"></button>
+          <button onclick="setBgColor('#e8f5e9')" style="width:44px;height:44px;border-radius:50%;background:#e8f5e9;border:3px solid #ccc;cursor:pointer;" title="淺綠"></button>
+          <button onclick="setBgColor('#fff3e0')" style="width:44px;height:44px;border-radius:50%;background:#fff3e0;border:3px solid #ccc;cursor:pointer;" title="淺橘"></button>
+          <button onclick="setBgColor('#fce4ec')" style="width:44px;height:44px;border-radius:50%;background:#fce4ec;border:3px solid #ccc;cursor:pointer;" title="淺粉"></button>
+        </div>
+      </div>
+
+      <button class="btn danger" onclick="doParentLogout()">登出</button>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="parentNav('home',this)">
+        <span class="nav-icon">🏠</span><span class="nav-label">首頁</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('msg',this)">
+        <span class="nav-icon">💬</span><span class="nav-label">傳訊息</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('history',this)">
+        <span class="nav-icon">📖</span><span class="nav-label">歷史相簿</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('map',this)">
+        <span class="nav-icon">📍</span><span class="nav-label">定位</span>
+      </button>
+      <button class="nav-item active" onclick="parentNav('settings',this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">設定</span>
       </button>
     </div>
   </div>
@@ -660,7 +782,7 @@
   ════════════════════════════ -->
   <div id="page-parent-home" class="page">
     <div class="topbar parent-topbar">
-      <div class="avatar" id="parent-avatar" onclick="triggerAvatarUpload('parent')" title="點擊更換大頭貼">👨‍👩‍👧</div>
+      <div class="avatar" id="parent-avatar" onclick="parentNav('settings',null)" title="點擊進入設定">👨‍👩‍👧</div>
       <div style="flex:1">
         <h1 id="parent-greeting">家長儀表板</h1>
         <div class="sub" id="parent-child-sub">查看孩子今天的狀況</div>
@@ -710,6 +832,9 @@
       <button class="nav-item" onclick="parentNav('map',this)">
         <span class="nav-icon">📍</span><span class="nav-label">定位</span>
       </button>
+      <button class="nav-item" onclick="parentNav('settings',this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">設定</span>
+      </button>
     </div>
   </div>
 
@@ -743,6 +868,9 @@
       <button class="nav-item" onclick="parentNav('map',this)">
         <span class="nav-icon">📍</span><span class="nav-label">定位</span>
       </button>
+      <button class="nav-item" onclick="parentNav('settings',this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">設定</span>
+      </button>
     </div>
   </div>
 
@@ -770,6 +898,9 @@
       <button class="nav-item" onclick="parentNav('map',this)">
         <span class="nav-icon">📍</span><span class="nav-label">定位</span>
       </button>
+      <button class="nav-item" onclick="parentNav('settings',this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">設定</span>
+      </button>
     </div>
   </div>
 
@@ -782,46 +913,26 @@
       <div><h1>孩子目前位置</h1><div class="sub" id="map-update-time">—</div></div>
     </div>
     <div class="content">
-      <!-- 使用說明 -->
+      <!-- 說明橫幅 -->
       <div class="notif-banner" style="display:flex;background:#e3f2fd;border-color:#2196f3;">
         <div class="notif-icon">ℹ️</div>
         <div class="notif-text" style="color:#1565c0;">
-          <b>如何取得孩子位置？</b><br>
-          ① 同一台裝置：讓孩子以小孩身份登入後，切換回家長登入，位置自動顯示。<br>
-          ② 不同裝置：複製下方「定位連結」，傳送給孩子，讓孩子在自己裝置開啟並點「回報位置」，家長再按「重新整理」。
-        </div>
-      </div>
-
-      <!-- 定位連結產生 -->
-      <div class="card" style="padding:16px;">
-        <h2 style="font-size:15px;margin-bottom:10px;">📲 傳送定位連結給孩子</h2>
-        <div style="display:flex;gap:8px;">
-          <input id="child-report-link" type="text" readonly style="flex:1;font-size:12px;background:#f5f5f5;" placeholder="點右側按鈕產生連結">
-          <button class="btn secondary" style="width:auto;padding:10px 14px;font-size:13px;white-space:nowrap;" onclick="genChildReportLink()">產生連結</button>
-          <button class="btn" style="width:auto;padding:10px 14px;font-size:13px;white-space:nowrap;" onclick="copyChildReportLink()">複製</button>
+          孩子的裝置登入後會持續自動回報 GPS 位置，此頁顯示孩子的<b>即時位置</b>，每 15 秒自動重整。
         </div>
       </div>
 
       <div class="card">
-        <h2 style="margin-bottom:12px;">📍 孩子目前位置</h2>
+        <h2 style="margin-bottom:12px;">📍 孩子即時位置</h2>
         <div id="map-container">
           <div id="map-div"></div>
           <div id="map-placeholder">
             <div style="font-size:36px;margin-bottom:8px;">🗺️</div>
             <div>尚無孩子的定位資料</div>
-            <div style="font-size:12px;margin-top:4px;color:#aaa;">請參考上方說明取得位置</div>
+            <div style="font-size:12px;margin-top:4px;color:#aaa;">請確認孩子的裝置已登入並開啟定位</div>
           </div>
         </div>
         <button class="btn" style="margin-top:14px;" onclick="refreshChildLocationOnMap()">🔄 重新整理位置</button>
         <p id="map-coords" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;"></p>
-      </div>
-
-      <!-- 小孩回報位置區塊（從連結進來時顯示） -->
-      <div id="child-report-panel" class="card" style="display:none;border:2px solid var(--green);">
-        <h2 style="font-size:15px;margin-bottom:8px;color:var(--blue);">🧒 小孩定位回報</h2>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">家長傳送連結給你，請點下方按鈕回報你的位置</p>
-        <button class="btn" onclick="childReportLocation()">📡 立即回報我的位置</button>
-        <p id="child-report-status" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;"></p>
       </div>
     </div>
     <div class="bottom-nav">
@@ -836,6 +947,9 @@
       </button>
       <button class="nav-item active" onclick="parentNav('map',this)">
         <span class="nav-icon">📍</span><span class="nav-label">定位</span>
+      </button>
+      <button class="nav-item" onclick="parentNav('settings',this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">設定</span>
       </button>
     </div>
   </div>
@@ -969,29 +1083,26 @@ function loadAvatar() {
   const users = getUsers();
   const user = users[sess.username];
   if (!user) return;
-  // 小孩大頭貼（topbar）
-  const childEl = document.getElementById('child-avatar');
-  if (childEl) {
-    const src = user.childAvatar || user.avatar;
-    childEl.innerHTML = src ? `<img src="${src}" alt="大頭貼">` : '🧒';
-  }
-  // 家長大頭貼（topbar）
-  const parentEl = document.getElementById('parent-avatar');
-  if (parentEl) {
-    const src = user.parentAvatar;
-    parentEl.innerHTML = src ? `<img src="${src}" alt="大頭貼">` : '👨‍👩‍👧';
-  }
-  // 對話頁頂部頭像：小孩端顯示家長頭像、家長端顯示小孩頭像
+  const childSrc   = user.childAvatar  || user.avatar || '';
+  const parentSrc  = user.parentAvatar || '';
+  const childHtml  = childSrc  ? `<img src="${childSrc}"  alt="大頭貼">` : '🧒';
+  const parentHtml = parentSrc ? `<img src="${parentSrc}" alt="大頭貼">` : '👨‍👩‍👧';
+
+  // 小孩頁各頭像（topbar + 設定頁）
+  ['child-avatar', 'settings-child-avatar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = childHtml;
+  });
+  // 家長頁各頭像（topbar + 設定頁）
+  ['parent-avatar', 'settings-parent-avatar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = parentHtml;
+  });
+  // 對話頁頭像
   const msgParentEl = document.getElementById('msg-parent-avatar');
-  if (msgParentEl) {
-    const src = user.parentAvatar;
-    msgParentEl.innerHTML = src ? `<img src="${src}" alt="家長頭像">` : '👨‍👩‍👧';
-  }
+  if (msgParentEl) msgParentEl.innerHTML = parentHtml;
   const msgChildEl = document.getElementById('msg-child-avatar');
-  if (msgChildEl) {
-    const src = user.childAvatar || user.avatar;
-    msgChildEl.innerHTML = src ? `<img src="${src}" alt="小孩頭像">` : '🧒';
-  }
+  if (msgChildEl) msgChildEl.innerHTML = childHtml;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1051,7 +1162,7 @@ function showPage(id) {
     refreshChildHome();
     loadAvatar();
   }
-  if (id === 'page-child-history') renderHistory();
+  if (id === 'page-child-today') renderTodayPhotos();
   if (id === 'page-child-messages') renderMessages();
   if (id === 'page-parent-home') loadAvatar();
 }
@@ -1666,12 +1777,13 @@ function initDemoMessages() {
    家長端：導覽
 ══════════════════════════════════════════════════════ */
 function parentNav(tab, btn) {
-  const pageMap = { home:'page-parent-home', msg:'page-parent-msg', history:'page-parent-history', map:'page-parent-map' };
+  const pageMap = { home:'page-parent-home', msg:'page-parent-msg', history:'page-parent-history', map:'page-parent-map', settings:'page-parent-settings' };
   showPage(pageMap[tab] || 'page-parent-home');
-  if (tab === 'home')    { refreshParentHome(); checkArrivalNotif(); checkSOSBanner(); }
-  if (tab === 'msg')     renderParentSentList();
-  if (tab === 'history') renderParentHistory();
-  if (tab === 'map')     { checkChildReportParam(); tryRefreshChildMap(); }
+  if (tab === 'home')     { refreshParentHome(); checkArrivalNotif(); checkSOSBanner(); }
+  if (tab === 'msg')      renderParentSentList();
+  if (tab === 'history')  renderParentHistory();
+  if (tab === 'map')      tryRefreshChildMap();
+  if (tab === 'settings') loadAvatar();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2047,7 +2159,19 @@ function updateRegMarkerPos(latlng) {
 }
 
 /* ══════════════════════════════════════════════════════
-   到家時間通知
+   Haversine 距離計算（公里）
+══════════════════════════════════════════════════════ */
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) ** 2 +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLng/2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+/* ══════════════════════════════════════════════════════
+   到家時間通知（改用 GPS 距離判斷，不用打卡）
 ══════════════════════════════════════════════════════ */
 function checkArrivalNotif() {
   const sess = getSession();
@@ -2062,29 +2186,43 @@ function checkArrivalNotif() {
 
   const [hh, mm] = hometime.split(':').map(Number);
   const now = new Date();
-  const deadlineMin = hh * 60 + mm + 30;
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const today = todayKey();
-  const rec = (user.records || []).find(r => r.date === today);
-  const checkedIn = !!(rec && (rec.mood || (rec.photos && rec.photos.length)));
+  const deadlineMin = hh * 60 + mm + 30;
+
+  // 判斷孩子是否在家（GPS 距離 ≤ 300m = 0.3 km）
+  const loc = user.lastLocation;
+  let isNearHome = false;
+  if (loc && user.homelat && user.homelng) {
+    const dist = haversineKm(
+      parseFloat(loc.lat), parseFloat(loc.lng),
+      user.homelat, user.homelng
+    );
+    isNearHome = (dist <= 0.3);
+  }
 
   banner.style.display = 'flex';
   if (nowMin < hh * 60 + mm) {
+    // 還沒到預定時間
     banner.className = 'notif-banner ok';
     banner.querySelector('.notif-icon').textContent = '🕐';
     text.textContent = `${childname} 的預定到家時間是 ${hometime}，還沒到喔！`;
-  } else if (nowMin >= deadlineMin && !checkedIn) {
-    banner.className = 'notif-banner';
-    banner.querySelector('.notif-icon').textContent = '⚠️';
-    text.textContent = `⚠️ 注意！${childname} 預定 ${hometime} 到家，現已超過 30 分鐘還沒有打卡紀錄！`;
-  } else if (checkedIn) {
+  } else if (isNearHome) {
+    // GPS 顯示已在家附近
     banner.className = 'notif-banner ok';
     banner.querySelector('.notif-icon').textContent = '✅';
-    text.textContent = `${childname} 今天已有打卡紀錄，一切安全 😊`;
+    text.textContent = `✅ ${childname} 的 GPS 顯示已在家附近，安全！（最後更新：${loc.time}）`;
+  } else if (nowMin >= deadlineMin && !isNearHome) {
+    // 超過30分鐘且GPS不在家
+    banner.className = 'notif-banner sos';
+    banner.querySelector('.notif-icon').textContent = '⚠️';
+    text.textContent = `⚠️ 注意！${childname} 預定 ${hometime} 到家，已超過 30 分鐘，GPS 顯示尚未到家！請確認孩子安全！`;
   } else {
-    banner.className = 'notif-banner ok';
+    // 到了時間但GPS尚無資料或不在家
+    banner.className = 'notif-banner';
     banner.querySelector('.notif-icon').textContent = '🏠';
-    text.textContent = `${childname} 預定到家時間 ${hometime}，超過 30 分鐘未打卡將自動提醒。`;
+    text.textContent = loc
+      ? `${childname} 預定到家時間 ${hometime}，GPS 顯示目前不在家附近（距家 ${(haversineKm(parseFloat(loc.lat), parseFloat(loc.lng), user.homelat, user.homelng)*1000).toFixed(0)}m）。`
+      : `${childname} 預定到家時間 ${hometime}，尚未取得 GPS 資料，請確認孩子已登入。`;
   }
 }
 
@@ -2149,6 +2287,46 @@ function enlargePhoto(src) {
 }
 
 /* ══════════════════════════════════════════════════════
+   小孩端：今日照片
+══════════════════════════════════════════════════════ */
+function renderTodayPhotos() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const today = todayKey();
+  const rec = (users[sess.username].records || []).find(r => r.date === today);
+  const photos = rec ? (rec.photos || (rec.photo ? [{ src: rec.photo, note: rec.note || '', time: rec.time }] : [])) : [];
+  const container = document.getElementById('today-photos-list');
+  const dateEl = document.getElementById('today-photos-date');
+  if (dateEl) dateEl.textContent = todayStr();
+
+  if (!photos.length) {
+    container.innerHTML = '<div class="empty-hint">今天還沒有照片，快去首頁上傳吧！📸</div>';
+    return;
+  }
+  let gridHtml;
+  if (photos.length === 1) {
+    gridHtml = `<div class="album-grid">
+      <div class="album-grid-item single"><img src="${photos[0].src}" alt="照片"></div>
+    </div>
+    ${photos[0].note ? `<div class="album-note-row">${escHtml(photos[0].note)}</div>` : ''}`;
+  } else {
+    const items = photos.map(p => `<div class="album-grid-item"><img src="${p.src}" alt="照片"></div>`).join('');
+    const firstNote = photos.find(p => p.note);
+    gridHtml = `<div class="album-grid">${items}</div>
+    ${firstNote ? `<div class="album-note-row">${escHtml(firstNote.note)}</div>` : ''}`;
+  }
+  const moodRow = rec && rec.mood ? `<div class="child-album-mood">${rec.mood}</div>` : '';
+  container.innerHTML = `<div class="child-album-day">
+    <div class="child-album-header">
+      ${moodRow}
+      <div class="child-album-date">${todayStr()} · ${photos.length} 張</div>
+    </div>
+    ${gridHtml}
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
    子頁導覽
 ══════════════════════════════════════════════════════ */
 function childNav(tab, btn) {
@@ -2157,9 +2335,22 @@ function childNav(tab, btn) {
   } else if (tab === 'messages') {
     showPage('page-child-messages');
     renderMessages();
-  } else {
-    showPage('page-child-history');
+  } else if (tab === 'today') {
+    showPage('page-child-today');
+    renderTodayPhotos();
+  } else if (tab === 'settings') {
+    showPage('page-child-settings');
+    loadAvatar();
   }
+}
+
+/* ══════════════════════════════════════════════════════
+   背景顏色（電腦版設定）
+══════════════════════════════════════════════════════ */
+function setBgColor(color) {
+  document.body.style.background = color;
+  document.getElementById('app').style.background = '#fff';
+  showToast('🎨 背景已更換！');
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2200,17 +2391,9 @@ function escAttr(s) {
 }
 
 /* ══════════════════════════════════════════════════════
-   自動登入（問題 7：只用 session 裡的 role，不用全域 currentRole）
+   自動登入（只用 session 裡的 role，不用全域 currentRole）
 ══════════════════════════════════════════════════════ */
 (function autoLogin() {
-  // 優先判斷：若 URL hash 含 #report:xxx，直接導向定位頁讓小孩回報
-  if (location.hash.startsWith('#report:')) {
-    // 顯示定位頁（不需登入）
-    showPage('page-parent-map');
-    checkChildReportParam();
-    return;
-  }
-
   const sess = getSession();
   if (!sess) return;
   const users = getUsers();
