@@ -1244,21 +1244,20 @@ function doRegister() {
   const password2 = document.getElementById('reg-password2').value;
   const childname = document.getElementById('reg-childname').value.trim();
   const hometime  = document.getElementById('reg-hometime').value;
-  const homeaddr  = document.getElementById('reg-homeaddr').value.trim();
   const homelat   = document.getElementById('reg-homelat').value;
   const homelng   = document.getElementById('reg-homelng').value;
 
   if (!username || !password || !childname) { showToast('請填寫所有必填欄位 ⚠️'); return; }
   if (password.length < 6) { showToast('密碼至少需要 6 個字元'); return; }
   if (password !== password2) { showToast('兩次密碼不一致 ⚠️'); return; }
-  if (!homelat || !homelng) { showToast('請先確認家裡地址座標 📍（搜尋地址、在地圖選點、或用 GPS 定位）'); return; }
+  if (!homelat || !homelng) { showToast('請先確認家裡位置 📍（在地圖選點或用 GPS 定位）'); return; }
 
   const users = getUsers();
   if (users[username]) { showToast('帳號已存在，請換一個'); return; }
 
   users[username] = {
     password, childname, hometime,
-    homeaddr, homelat: parseFloat(homelat), homelng: parseFloat(homelng),
+    homelat: parseFloat(homelat), homelng: parseFloat(homelng),
     records: [], messages: []
   };
   saveUsers(users);
