@@ -440,11 +440,18 @@
       <div class="card">
         <h2>今天的神奇照片 📸</h2>
         <p style="margin-bottom:14px;">拍一張今天最棒的畫面！</p>
-        <div id="photo-preview" onclick="document.getElementById('photo-input').click()">
+        <div id="photo-preview">
           <span style="font-size:36px;">📷</span>
-          <span>點這裡選一張照片</span>
+          <span>請選擇下方方式上傳</span>
         </div>
-        <input type="file" id="photo-input" accept="image/*" onchange="previewPhoto(event)">
+        <!-- 兩個隱藏 input：一個拍照、一個相簿 -->
+        <input type="file" id="photo-input-camera" accept="image/*" capture="environment" onchange="previewPhoto(event)" style="display:none">
+        <input type="file" id="photo-input-gallery" accept="image/*" onchange="previewPhoto(event)" style="display:none">
+        <!-- 選擇按鈕列 -->
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-camera').click()">📷 直接拍照</button>
+          <button class="btn secondary" style="flex:1;padding:12px 6px;font-size:14px;" onclick="document.getElementById('photo-input-gallery').click()">🖼️ 從相簿選</button>
+        </div>
         <div style="margin-top:12px;">
           <label>想說什麼嗎？（選填）</label>
           <textarea id="photo-note" placeholder="今天發生了什麼有趣的事…"></textarea>
@@ -875,7 +882,7 @@ function refreshChildHome() {
   selectedPhotoDataUrl = null;
   document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('mood-saved-hint').style.display = 'none';
-  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>點這裡選一張照片</span>';
+  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>請選擇下方方式上傳</span>';
   document.getElementById('photo-preview').classList.remove('has-img');
   document.getElementById('photo-note').value = '';
 }
@@ -952,7 +959,7 @@ function savePhoto() {
   saveUsers(users);
   // 重置預覽讓使用者可繼續上傳
   selectedPhotoDataUrl = null;
-  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>點這裡選一張照片</span>';
+  document.getElementById('photo-preview').innerHTML = '<span style="font-size:36px;">📷</span><span>請選擇下方方式上傳</span>';
   document.getElementById('photo-preview').classList.remove('has-img');
   document.getElementById('photo-note').value = '';
   showToast('🌟 照片上傳成功！可繼續新增更多照片 ✨');
