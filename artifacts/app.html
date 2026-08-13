@@ -301,6 +301,73 @@
     gap: 8px; color: var(--muted); font-size: 14px;
   }
 
+  /* 註冊地址選點地圖 */
+  #reg-map-container {
+    width: 100%; height: 240px; border-radius: 12px;
+    overflow: hidden; position: relative;
+    border: 1.5px solid #e0e0e0; display: none;
+    margin-top: 8px;
+  }
+  #reg-map-div { width: 100%; height: 100%; }
+
+  /* 家長歷史相簿 — 日期分類卡片 */
+  .album-day {
+    margin-bottom: 24px;
+  }
+  .album-day-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .album-day-date {
+    font-size: 14px; font-weight: 700; color: var(--text);
+  }
+  .album-day-mood { font-size: 22px; }
+  .album-day-count {
+    font-size: 12px; color: var(--muted);
+    background: var(--gray); border-radius: 10px;
+    padding: 2px 8px;
+  }
+  .album-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .album-grid-item {
+    position: relative; aspect-ratio: 1/1; overflow: hidden;
+    border-radius: 8px; cursor: pointer;
+  }
+  .album-grid-item img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform .2s;
+  }
+  .album-grid-item:hover img { transform: scale(1.05); }
+  .album-grid-item.single {
+    grid-column: span 3; aspect-ratio: 16/9;
+  }
+  .album-note-row {
+    margin-top: 6px; font-size: 13px; color: var(--muted);
+    padding: 0 2px;
+  }
+
+  /* 小孩端歷史相簿也用同樣樣式 */
+  .child-album-day { margin-bottom: 24px; }
+  .child-album-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .child-album-date { font-size: 14px; font-weight: 700; color: var(--text); }
+  .child-album-mood { font-size: 22px; }
+
+  /* 定位狀態列 */
+  .gps-status-bar {
+    background: #e8f5e9; border-radius: 10px;
+    padding: 8px 14px; font-size: 13px; color: #2e7d32;
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    margin: 0 20px 0;
+  }
+  .gps-dot { width: 8px; height: 8px; border-radius: 50%; background: #25D366; flex-shrink: 0; animation: pulse 1.2s infinite alternate; }
+  .gps-dot.off { background: #bbb; animation: none; }
+
   /* 通知條 */
   .notif-banner {
     background: #fff3e0; border: 1.5px solid #ffb300;
@@ -428,8 +495,14 @@
             <label>家裡地址 🏠</label>
             <div style="display:flex;gap:8px;align-items:flex-start;flex-direction:column;">
               <input id="reg-homeaddr" type="text" placeholder="例如：台南市永康區中正路100號">
-              <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="geocodeHomeAddress()">📍 確認地址座標</button>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="geocodeHomeAddress()">🔍 搜尋地址</button>
+                <button type="button" class="btn secondary" style="padding:10px 16px;font-size:13px;width:auto;" onclick="openRegMap()">🗺️ 在地圖上選點</button>
+              </div>
               <div id="reg-addr-result" style="font-size:13px;color:var(--muted);min-height:18px;"></div>
+              <div id="reg-map-container">
+                <div id="reg-map-div"></div>
+              </div>
               <input type="hidden" id="reg-homelat">
               <input type="hidden" id="reg-homelng">
             </div>
@@ -495,6 +568,12 @@
         <button class="btn" style="margin-top:12px;" onclick="saveAllPhotos()">上傳照片 ✨</button>
       </div>
 
+    </div>
+
+    <!-- GPS 狀態列 -->
+    <div id="child-gps-bar" style="display:flex;align-items:center;gap:8px;background:#e8f5e9;border-radius:0;padding:8px 16px;font-size:13px;color:#2e7d32;flex-shrink:0;border-top:1px solid #c8e6c9;">
+      <div style="width:8px;height:8px;border-radius:50%;background:#25D366;flex-shrink:0;animation:pulse 1.2s infinite alternate;"></div>
+      <span>📡 定位已開啟，自動回報位置給家長</span>
     </div>
 
     <div class="bottom-nav">
@@ -704,14 +783,15 @@
     <div class="content">
       <div class="card">
         <h2 style="margin-bottom:12px;">📍 即時定位</h2>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">孩子的裝置會自動回報 GPS，此處顯示最新紀錄的位置。</p>
         <div id="map-container">
           <div id="map-div"></div>
           <div id="map-placeholder">
             <div style="font-size:36px;margin-bottom:8px;">🗺️</div>
-            <div>點擊下方按鈕取得孩子位置</div>
+            <div>尚無孩子的定位資料</div>
           </div>
         </div>
-        <button class="btn" style="margin-top:14px;" onclick="getChildLocation()">📡 取得目前 GPS 位置</button>
+        <button class="btn" style="margin-top:14px;" onclick="refreshChildLocationOnMap()">🔄 重新整理位置</button>
         <p id="map-coords" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;"></p>
       </div>
     </div>
@@ -762,6 +842,9 @@ let _parentRecognition = null;
 let _parentIsRecording = false;
 let _osmMap = null;
 let _osmMarker = null;
+let _gpsWatchId = null;      // 小孩端持續定位 watch ID
+let _regMap = null;          // 註冊選點地圖
+let _regMapMarker = null;    // 註冊選點標記
 
 /* ══════════════════════════════════════════════════════
    localStorage 存取（問題 1：跨裝置同步靠匯出/匯入）
@@ -1029,7 +1112,7 @@ function doLogin() {
 function enterApp(role) {
   if (role === 'child') {
     showPage('page-child-home');
-    startChildGPSWatch(); // 啟動 GPS 背景監測
+    startChildGPSWatch(); // 啟動 GPS 持續定位
   } else {
     showPage('page-parent-home');
     refreshParentHome();
@@ -1044,6 +1127,7 @@ function enterApp(role) {
 ══════════════════════════════════════════════════════ */
 function doLogout() {
   if (!confirm('確定要登出嗎？')) return;
+  stopChildGPSWatch();
   clearSession();
   currentUser = null;
   currentRole = 'child';
@@ -1256,7 +1340,7 @@ function saveAllPhotos() {
 }
 
 /* ══════════════════════════════════════════════════════
-   歷史紀錄
+   小孩端：歷史紀錄（相簿樣式）
 ══════════════════════════════════════════════════════ */
 function renderHistory() {
   const sess = getSession();
@@ -1271,19 +1355,33 @@ function renderHistory() {
   }
   container.innerHTML = records.map(r => {
     const photos = r.photos || (r.photo ? [{ src: r.photo, note: r.note || '', time: r.time }] : []);
-    const photosHtml = photos.map(p => `
-      <div style="margin:6px 0;">
-        <img src="${p.src}" alt="生活照" style="width:100%;border-radius:10px;">
-        ${p.note ? `<div class="note" style="margin-top:4px;">${escHtml(p.note)}</div>` : ''}
-        <div class="time-tag">${p.time}</div>
-      </div>`).join('');
-    return `
-      <div class="record-day">
-        <div class="date-label">${formatDate(r.date)}${photos.length > 1 ? ` · ${photos.length} 張照片` : ''}</div>
-        <div class="record-card">
-          ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
-          ${photosHtml || '<div style="color:var(--muted);font-size:13px;margin-top:6px;">無照片</div>'}
+    const count = photos.length;
+
+    let gridHtml;
+    if (count === 0) {
+      gridHtml = `<div style="color:var(--muted);font-size:13px;padding:8px 0;">無照片</div>`;
+    } else if (count === 1) {
+      gridHtml = `<div class="album-grid">
+        <div class="album-grid-item single">
+          <img src="${photos[0].src}" alt="照片">
         </div>
+      </div>
+      ${photos[0].note ? `<div class="album-note-row">${escHtml(photos[0].note)}</div>` : ''}`;
+    } else {
+      const items = photos.map(p => `
+        <div class="album-grid-item"><img src="${p.src}" alt="照片"></div>`).join('');
+      const firstNote = photos.find(p => p.note);
+      gridHtml = `<div class="album-grid">${items}</div>
+      ${firstNote ? `<div class="album-note-row">${escHtml(firstNote.note)}</div>` : ''}`;
+    }
+
+    return `
+      <div class="child-album-day">
+        <div class="child-album-header">
+          ${r.mood ? `<div class="child-album-mood">${r.mood}</div>` : ''}
+          <div class="child-album-date">${formatDate(r.date)}${count > 1 ? ` · ${count} 張` : ''}</div>
+        </div>
+        ${gridHtml}
       </div>`;
   }).join('');
 }
@@ -1527,6 +1625,7 @@ function parentNav(tab, btn) {
   if (tab === 'home')    { refreshParentHome(); checkArrivalNotif(); checkSOSBanner(); }
   if (tab === 'msg')     renderParentSentList();
   if (tab === 'history') renderParentHistory();
+  if (tab === 'map')     refreshChildLocationOnMap();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1570,7 +1669,7 @@ function refreshParentHome() {
 }
 
 /* ══════════════════════════════════════════════════════
-   家長端：歷史相簿
+   家長端：歷史相簿（依日期分類，像相簿樣式）
 ══════════════════════════════════════════════════════ */
 function renderParentHistory() {
   const sess = getSession();
@@ -1579,84 +1678,207 @@ function renderParentHistory() {
   const records = (users[sess.username].records || []).slice().reverse();
   const container = document.getElementById('parent-history-list');
   if (!records.length) { container.innerHTML = '<div class="empty-hint">還沒有紀錄</div>'; return; }
+
   container.innerHTML = records.map(r => {
     const photos = r.photos || (r.photo ? [{ src: r.photo, note: r.note || '', time: r.time }] : []);
-    const photosHtml = photos.map(p => `
-      <div style="margin:6px 0;">
-        <img src="${p.src}" alt="生活照" style="width:100%;border-radius:10px;cursor:pointer;" onclick="enlargePhoto('${escAttr(p.src)}')">
-        ${p.note ? `<div class="note" style="margin-top:4px;">${escHtml(p.note)}</div>` : ''}
-        <div class="time-tag">${p.time}</div>
-      </div>`).join('');
-    return `
-      <div class="record-day">
-        <div class="date-label">${formatDate(r.date)}${photos.length > 1 ? ` · ${photos.length} 張照片` : ''}</div>
-        <div class="record-card">
-          ${r.mood ? `<div class="mood-icon">${r.mood}</div>` : ''}
-          ${photosHtml || '<div style="color:var(--muted);font-size:13px;margin-top:6px;">無照片</div>'}
+    const count = photos.length;
+
+    // 相片格子：單張滿版，多張 3 欄格子
+    let gridHtml;
+    if (count === 0) {
+      gridHtml = `<div style="color:var(--muted);font-size:13px;padding:8px 0;">無照片</div>`;
+    } else if (count === 1) {
+      gridHtml = `<div class="album-grid">
+        <div class="album-grid-item single" onclick="enlargePhoto('${escAttr(photos[0].src)}')">
+          <img src="${photos[0].src}" alt="照片">
         </div>
+      </div>
+      ${photos[0].note ? `<div class="album-note-row">${escHtml(photos[0].note)}</div>` : ''}`;
+    } else {
+      const items = photos.map(p => `
+        <div class="album-grid-item" onclick="enlargePhoto('${escAttr(p.src)}')">
+          <img src="${p.src}" alt="照片">
+        </div>`).join('');
+      // 注記只顯示第一張有備註的
+      const firstNote = photos.find(p => p.note);
+      gridHtml = `<div class="album-grid">${items}</div>
+      ${firstNote ? `<div class="album-note-row">${escHtml(firstNote.note)}</div>` : ''}`;
+    }
+
+    return `
+      <div class="album-day">
+        <div class="album-day-header">
+          ${r.mood ? `<div class="album-day-mood">${r.mood}</div>` : ''}
+          <div class="album-day-date">${formatDate(r.date)}</div>
+          ${count > 0 ? `<div class="album-day-count">${count} 張</div>` : ''}
+        </div>
+        ${gridHtml}
       </div>`;
   }).join('');
 }
 
 /* ══════════════════════════════════════════════════════
-   家長端：地圖定位（OpenStreetMap + Leaflet）
+   小孩端：登入後自動持續 GPS 定位（watchPosition）
 ══════════════════════════════════════════════════════ */
-function getChildLocation() {
-  if (!navigator.geolocation) { showToast('瀏覽器不支援定位'); return; }
-  showToast('📡 正在取得 GPS 位置…');
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-    const latStr = lat.toFixed(6);
-    const lngStr = lng.toFixed(6);
+function startChildGPSWatch() {
+  if (_gpsWatchId !== null) return; // 已在追蹤中
+  if (!navigator.geolocation) return;
+
+  function onGPS(pos) {
+    const lat = pos.coords.latitude.toFixed(6);
+    const lng = pos.coords.longitude.toFixed(6);
     const now = nowTime();
-
-    document.getElementById('map-update-time').textContent = `更新時間：${now}`;
-    document.getElementById('map-coords').textContent = `緯度 ${latStr}　經度 ${lngStr}`;
-    document.getElementById('map-placeholder').style.display = 'none';
-
-    function initMap() {
-      if (_osmMap) {
-        _osmMap.setView([lat, lng], 16);
-        _osmMarker.setLatLng([lat, lng]);
-        _osmMarker.setPopupContent(`<b>孩子目前位置</b><br>${latStr}, ${lngStr}<br>更新：${now}`).openPopup();
-      } else {
-        _osmMap = L.map('map-div').setView([lat, lng], 16);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          maxZoom: 19
-        }).addTo(_osmMap);
-        const icon = L.divIcon({ html: '<div style="font-size:28px;line-height:1;">🧒</div>', className: '', iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-32] });
-        _osmMarker = L.marker([lat, lng], { icon }).addTo(_osmMap)
-          .bindPopup(`<b>孩子目前位置</b><br>${latStr}, ${lngStr}<br>更新：${now}`).openPopup();
-      }
-    }
-
-    if (window.L) {
-      initMap();
-    } else {
-      if (!document.getElementById('leaflet-css')) {
-        const lnk = document.createElement('link');
-        lnk.id = 'leaflet-css'; lnk.rel = 'stylesheet';
-        lnk.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(lnk);
-      }
-      const s = document.createElement('script');
-      s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      s.onload = initMap;
-      document.head.appendChild(s);
-    }
-
     const sess = getSession();
-    if (sess) {
-      const users = getUsers();
-      users[sess.username].lastLocation = { lat: latStr, lng: lngStr, time: now };
-      saveUsers(users);
+    if (!sess) { stopChildGPSWatch(); return; }
+    const users = getUsers();
+    if (!users[sess.username]) { stopChildGPSWatch(); return; }
+    users[sess.username].lastLocation = { lat, lng, time: now, date: todayKey() };
+    saveUsers(users);
+    // 更新狀態列 UI
+    const barSpan = document.querySelector('#child-gps-bar span');
+    if (barSpan) barSpan.textContent = `📡 定位中 — 最後更新 ${now}`;
+  }
+
+  _gpsWatchId = navigator.geolocation.watchPosition(
+    onGPS,
+    () => { /* 失敗靜默，不打擾小孩 */ },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+  );
+
+  // 立即取一次確保快速有資料
+  navigator.geolocation.getCurrentPosition(onGPS, ()=>{}, { enableHighAccuracy: true });
+}
+
+function stopChildGPSWatch() {
+  if (_gpsWatchId !== null) {
+    navigator.geolocation.clearWatch(_gpsWatchId);
+    _gpsWatchId = null;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   家長端：讀取小孩最後回報的定位並顯示在地圖上
+══════════════════════════════════════════════════════ */
+function refreshChildLocationOnMap() {
+  const sess = getSession();
+  if (!sess) return;
+  const users = getUsers();
+  const loc = users[sess.username].lastLocation;
+  if (!loc) {
+    showToast('⚠️ 孩子尚未回報定位，請確認孩子的裝置已登入');
+    return;
+  }
+  const lat = parseFloat(loc.lat);
+  const lng = parseFloat(loc.lng);
+  const latStr = loc.lat;
+  const lngStr = loc.lng;
+  const timeStr = `${loc.date || ''} ${loc.time}`;
+
+  document.getElementById('map-update-time').textContent = `最後更新：${timeStr}`;
+  document.getElementById('map-coords').textContent = `緯度 ${latStr}　經度 ${lngStr}`;
+  document.getElementById('map-placeholder').style.display = 'none';
+
+  function initMap() {
+    if (_osmMap) {
+      _osmMap.setView([lat, lng], 16);
+      _osmMarker.setLatLng([lat, lng]);
+      _osmMarker.setPopupContent(`<b>孩子目前位置</b><br>${latStr}, ${lngStr}<br>更新：${timeStr}`).openPopup();
+    } else {
+      _osmMap = L.map('map-div').setView([lat, lng], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+      }).addTo(_osmMap);
+
+      // 家的標記
+      const homeUser = users[sess.username];
+      if (homeUser.homelat && homeUser.homelng) {
+        const homeIcon = L.divIcon({ html: '<div style="font-size:26px;line-height:1;">🏠</div>', className:'', iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-32] });
+        L.marker([homeUser.homelat, homeUser.homelng], { icon: homeIcon })
+          .addTo(_osmMap).bindPopup(`<b>家裡地址</b><br>${homeUser.homeaddr || ''}`);
+      }
+
+      const icon = L.divIcon({ html: '<div style="font-size:28px;line-height:1;">🧒</div>', className: '', iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-32] });
+      _osmMarker = L.marker([lat, lng], { icon }).addTo(_osmMap)
+        .bindPopup(`<b>孩子目前位置</b><br>${latStr}, ${lngStr}<br>更新：${timeStr}`).openPopup();
     }
-    showToast('✅ 位置已更新！');
-  }, () => {
-    showToast('⚠️ 無法取得位置，請確認已授權定位');
-  }, { enableHighAccuracy: true, timeout: 10000 });
+  }
+
+  if (window.L) {
+    initMap();
+  } else {
+    loadLeaflet(initMap);
+  }
+  showToast('✅ 地圖已更新！');
+}
+
+function loadLeaflet(cb) {
+  if (!document.getElementById('leaflet-css')) {
+    const lnk = document.createElement('link');
+    lnk.id = 'leaflet-css'; lnk.rel = 'stylesheet';
+    lnk.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(lnk);
+  }
+  const s = document.createElement('script');
+  s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+/* ══════════════════════════════════════════════════════
+   註冊：在地圖上選點（開啟地圖讓家長點選家的位置）
+══════════════════════════════════════════════════════ */
+function openRegMap() {
+  const container = document.getElementById('reg-map-container');
+  container.style.display = 'block';
+
+  function initRegMap() {
+    if (_regMap) { _regMap.invalidateSize(); return; }
+    // 預設台灣中心
+    const defaultLat = 23.5, defaultLng = 121.0;
+    _regMap = L.map('reg-map-div').setView([defaultLat, defaultLng], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19
+    }).addTo(_regMap);
+
+    // 如果已有搜尋到的座標，先移到那裡
+    const existingLat = document.getElementById('reg-homelat').value;
+    const existingLng = document.getElementById('reg-homelng').value;
+    if (existingLat && existingLng) {
+      const lat = parseFloat(existingLat), lng = parseFloat(existingLng);
+      _regMap.setView([lat, lng], 16);
+      _regMapMarker = L.marker([lat, lng], { draggable: true }).addTo(_regMap)
+        .bindPopup('家裡位置（可拖曳調整）').openPopup();
+      _regMapMarker.on('dragend', e => updateRegMarkerPos(e.target.getLatLng()));
+    }
+
+    _regMap.on('click', e => {
+      updateRegMarkerPos(e.latlng);
+      if (_regMapMarker) {
+        _regMapMarker.setLatLng(e.latlng).openPopup();
+      } else {
+        _regMapMarker = L.marker(e.latlng, { draggable: true }).addTo(_regMap)
+          .bindPopup('家裡位置（可拖曳調整）').openPopup();
+        _regMapMarker.on('dragend', ev => updateRegMarkerPos(ev.target.getLatLng()));
+      }
+    });
+    showToast('🗺️ 在地圖上點選家裡位置，或拖曳標記調整');
+  }
+
+  if (window.L) {
+    initRegMap();
+  } else {
+    loadLeaflet(initRegMap);
+  }
+}
+
+function updateRegMarkerPos(latlng) {
+  const lat = latlng.lat.toFixed(6);
+  const lng = latlng.lng.toFixed(6);
+  document.getElementById('reg-homelat').value = lat;
+  document.getElementById('reg-homelng').value = lng;
+  document.getElementById('reg-addr-result').innerHTML =
+    `✅ 已選取地點：緯度 ${lat}，經度 ${lng}<br><span style="font-size:12px;color:#888;">（若有輸入地址文字，地址欄保持原值）</span>`;
 }
 
 /* ══════════════════════════════════════════════════════
