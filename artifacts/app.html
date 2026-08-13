@@ -2257,6 +2257,9 @@ function tryRefreshChildMap() {
   const sess = getSession();
   if (!sess) return;
 
+  // 每次進定位頁先銷毀舊地圖，確保家的座標用最新值重建
+  destroyMap();
+
   // 先從雲端讀取（跨裝置同步）
   pullLocationFromCloud().then(cloudLoc => {
     if (cloudLoc) {
